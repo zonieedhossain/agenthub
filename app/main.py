@@ -4,6 +4,10 @@ from fastapi import FastAPI
 from sqlalchemy import text
 from app.database import engine
 
+import traceback
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: runs before the app starts accepting requests
@@ -29,9 +33,19 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+
 from app.routers.auth import router as auth_router
 
 app.include_router(auth_router)
+
+@app.exception_handler(Exception)
+async def debug_exception_handler(request: Request, exc: Exception):
+    tb = traceback.format_exc()
+    print(tb)  # still prints to terminal too
+    return JSONResponse(
+        status_code=500,
+        content={"error": str(exc), "traceback": tb},
+    )
 
 @app.get("/")
 def read_root():
