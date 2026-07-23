@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, Text, ForeignKey, UniqueConstrai
 from sqlalchemy.orm import relationship
 from app.database import Base
 
+
 class Agent(Base):
     __tablename__ = "agents"
 
@@ -54,3 +55,13 @@ class Message(Base):
     role = Column(String, nullable=False)  # "user" or "assistant"
     content = Column(Text, nullable=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
+
+
+class UsageLog(Base):
+    __tablename__ = "usage_logs"
+
+    id = Column(Integer, primary_key=True)
+    agent_id = Column(Integer, ForeignKey("agents.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    timestamp = Column(TIMESTAMP, server_default=func.now())
+    tokens = Column(Integer, nullable=False, default=0)
