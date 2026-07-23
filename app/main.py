@@ -38,14 +38,14 @@ from app.routers.auth import router as auth_router
 
 app.include_router(auth_router)
 
-@app.exception_handler(Exception)
-async def debug_exception_handler(request: Request, exc: Exception):
-    tb = traceback.format_exc()
-    print(tb)  # still prints to terminal too
-    return JSONResponse(
-        status_code=500,
-        content={"error": str(exc), "traceback": tb},
-    )
+# @app.exception_handler(Exception)
+# async def debug_exception_handler(request: Request, exc: Exception):
+#     tb = traceback.format_exc()
+#     print(tb)  # still prints to terminal too
+#     return JSONResponse(
+#         status_code=500,
+#         content={"error": str(exc), "traceback": tb},
+#     )
 
 @app.get("/")
 def read_root():
