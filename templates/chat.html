@@ -7,7 +7,7 @@
     <div id="msgs" class="msgs"></div>
     <div class="composer">
         <input id="chatin" placeholder="Type a message…" onkeydown="if(event.key==='Enter')send()">
-        <button class="btn" onclick="send()">Send</button>
+        <button class="btn" id="sendBtn" onclick="send()">Send</button>
     </div>
 </div>
 {% endblock %}
@@ -24,21 +24,72 @@
       const tabs = document.getElementById('subtabs');
       tabs.innerHTML = `<button class="subtab on" onclick="pick(null,this)">Main agent</button>` +
         a.sub_agents.map(s => `<button class="subtab" onclick="pick(${s.id},this)">${esc(s.name)}</button>`).join('');
+      loadHistory(null);
     });
+
+    // Pulls this conversation's history from the server instead of starting blank —
+    // switching tabs (or reloading the page) no longer loses what was already said.
+    async function loadHistory(subId) {
+      const box = document.getElementById('msgs');
+      box.innerHTML = '<div class="hist-loading">Loading conversation…</div>';
+      const qs = subId ? `?sub_agent_id=${subId}` : '';
+      const res = await fetch(`/agents/${slug}/chat/history${qs}`, {
+        headers: {'Authorization': `Bearer ${token}`},
+      });
+      history = res.ok
+        ? (await res.json()).items.map(m => ({role: m.role === 'assistant' ? 'bot' : 'user', content: m.content}))
+        : [];
+      draw();
+    }
 
     function pick(id, btn) {
       activeSub = id;
-      history = [];
       document.querySelectorAll('.subtab').forEach(t => t.classList.remove('on'));
       btn.classList.add('on');
-      draw();
+      loadHistory(id);
     }
 
     function draw() {
       const box = document.getElementById('msgs');
       box.innerHTML = history.map(m =>
-        `<div class="msg ${m.role}">${esc(m.content)}</div>`).join('');
+        `<div class="msg ${m.role}">${m.role === 'bot' ? formatReply(m.content) : esc(m.content)}</div>`).join('');
       box.scrollTop = box.scrollHeight;
+    }
+
+    // Light markdown-style rendering for bot replies: bold, inline code, bullet
+    // lists, and paragraph/line breaks. Escapes first, then only ever injects
+    // tags it constructs itself around already-escaped text — never re-opens
+    // the innerHTML XSS hole the escaping was added to close.
+    function inlineFormat(s) {
+      return s
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>');
+    }
+
+    function formatReply(raw) {
+      const blocks = esc(raw).split(/\n\s*\n/);
+      return blocks.map(block => {
+        const lines = block.split('\n').filter(l => l.trim() !== '');
+        if (lines.length && lines.every(l => /^[-*]\s+/.test(l))) {
+          return '<ul>' + lines.map(l => `<li>${inlineFormat(l.replace(/^[-*]\s+/, ''))}</li>`).join('') + '</ul>';
+        }
+        return `<p>${lines.map(inlineFormat).join('<br>')}</p>`;
+      }).join('');
+    }
+
+    function setBusy(busy) {
+      document.getElementById('chatin').disabled = busy;
+      document.getElementById('sendBtn').disabled = busy;
+    }
+
+    function showThinking() {
+      const box = document.getElementById('msgs');
+      const el = document.createElement('div');
+      el.className = 'msg bot thinking';
+      el.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+      box.appendChild(el);
+      box.scrollTop = box.scrollHeight;
+      return el;
     }
 
     async function send() {
@@ -49,18 +100,24 @@
       history.push({role: 'user', content: message});
       draw();
 
-      const res = await fetch(`/agents/${slug}/chat`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
-        body: JSON.stringify({message, sub_agent_id: activeSub})
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        history.push({role: 'bot', content: 'Error: ' + (data.detail || 'failed')});
-      } else {
-        history.push({role: 'bot', content: data.reply});
+      setBusy(true);
+      const thinkingEl = showThinking();
+      try {
+        const res = await fetch(`/agents/${slug}/chat`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+          body: JSON.stringify({message, sub_agent_id: activeSub}),
+        });
+        const data = await res.json();
+        history.push({role: 'bot', content: res.ok ? data.reply : 'Error: ' + (data.detail || 'failed')});
+      } catch (e) {
+        history.push({role: 'bot', content: 'Error: could not reach the server'});
+      } finally {
+        thinkingEl.remove();
+        setBusy(false);
+        draw();
+        input.focus();
       }
-      draw();
     }
 </script>
 {% endblock %}

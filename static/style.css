@@ -42,6 +42,25 @@ input{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:8p
 .msg.bot{align-self:flex-start;background:var(--surface);border:1px solid var(--line)}
 .composer{display:flex;gap:8px;padding:12px 0}
 .composer input{flex:1}
+.composer input:disabled{opacity:.6}
+.composer .btn:disabled{opacity:.5;cursor:default}
+
+.msg.bot p{margin:0 0 8px}
+.msg.bot p:last-child{margin-bottom:0}
+.msg.bot ul{margin:0 0 8px 18px}
+.msg.bot ul:last-child{margin-bottom:0}
+.msg.bot code{background:var(--accent-soft);border-radius:4px;padding:1px 5px;font-family:monospace;font-size:13px}
+.hist-loading{color:var(--muted);font-size:13px;padding:10px 0}
+
+.msg.thinking{display:flex;gap:4px;align-items:center;padding:14px}
+.msg.thinking .dot{width:6px;height:6px;border-radius:50%;background:var(--muted);
+  animation:bounce 1.2s infinite ease-in-out}
+.msg.thinking .dot:nth-child(2){animation-delay:.15s}
+.msg.thinking .dot:nth-child(3){animation-delay:.3s}
+@keyframes bounce{
+  0%,60%,100%{transform:translateY(0);opacity:.4}
+  30%{transform:translateY(-4px);opacity:1}
+}
 
 .pagination{display:flex;justify-content:center;align-items:center;gap:10px;padding:20px 0}
 .pagination button{border:1px solid var(--line);background:var(--surface);border-radius:8px;
