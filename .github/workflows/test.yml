@@ -28,4 +28,5 @@ jobs:
         env:
           JWT_SECRET: test-secret-for-ci-only
           GEMINI_API_KEY: dummy-key-not-used-in-tests
+          DATABASE_URL: sqlite:///./ci_test.db
         run: pytest tests/ -v
