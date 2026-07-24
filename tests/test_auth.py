@@ -56,6 +56,25 @@ def test_same_email_can_signup_under_two_different_agents(client, seeded_agent, 
     assert res1.json()["access_token"] != res2.json()["access_token"]
 
 
+def test_signup_rejects_short_password(client, seeded_agent):
+    res = client.post("/agents/doctor-physician/signup", json={
+        "email": "shortpw@test.com", "password": "abc123"  # 6 chars, under the 8-char minimum
+    })
+    assert res.status_code == 422
+
+
+def test_login_is_rate_limited(client, seeded_agent):
+    # 10/minute — send well past that so the assertion doesn't depend on
+    # exactly which request number trips it.
+    statuses = [
+        client.post("/agents/doctor-physician/login", json={
+            "email": "nobody@test.com", "password": "whatever123"
+        }).status_code
+        for _ in range(15)
+    ]
+    assert 429 in statuses
+
+
 def test_token_from_one_agent_rejected_on_another(client, seeded_agent, second_agent):
     """THE critical isolation test — a token minted for Agent A must not work on Agent B."""
     signup_res = client.post("/agents/doctor-physician/signup", json={
