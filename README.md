@@ -170,7 +170,7 @@ erDiagram
 
 ### Admin panel
 
-`/admin` is gated by HTTP Basic auth (`ADMIN_USER`/`ADMIN_PASSWORD`) behind a styled sign-in form (not a browser-native prompt). Once signed in:
+`/admin` is gated by HTTP Basic auth (`ADMIN_USER`/`ADMIN_PASSWORD`) behind a styled sign-in form (not a browser-native prompt). Credentials aren't published here since `/admin` has write access to the live agent catalog — available on request. Once signed in:
 
 - **Add/update an agent** through a form that calls the same `upsert_agent()` the CSV pipeline uses (see above) — validated server-side (`app/schemas.py`: minimum lengths, a positive agent number, up to 5 sub-agents) and checked client-side against the existing catalog before submit: if the typed profession already maps to an existing agent, a warning shows what's already there and the submit button relabels to "Update existing agent" instead of silently overwriting it.
 - **Recently added / updated** — pulls the public `/agents` endpoint (already sorted most-recently-updated first) so a freshly added or edited agent is visible immediately, regardless of whether it has any chat activity yet.
