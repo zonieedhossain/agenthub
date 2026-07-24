@@ -1,12 +1,8 @@
-from pydantic import BaseModel, EmailStr
 from typing import Optional
+from pydantic import BaseModel, EmailStr
 
-class ChatRequest(BaseModel):
-    message: str
-    sub_agent_id: Optional[int] = None
 
-class ChatResponse(BaseModel):
-    reply: str
+# --- Auth ---
 
 class SignupRequest(BaseModel):
     email: EmailStr
@@ -22,3 +18,37 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
 
+
+# --- Chat ---
+
+class ChatRequest(BaseModel):
+    message: str
+    sub_agent_id: Optional[int] = None
+
+
+class ChatResponse(BaseModel):
+    reply: str
+
+
+# --- Pagination (plain dict-based, no generics needed) ---
+
+class AgentListResponse(BaseModel):
+    items: list[dict]
+    page: int
+    limit: int
+    total: int
+    total_pages: int
+
+
+# --- Admin ---
+
+class AdminSubAgentInput(BaseModel):
+    name: str
+    task: str
+
+
+class AdminAgentInput(BaseModel):
+    number: int
+    industry: str
+    profession: str
+    sub_agents: list[AdminSubAgentInput]  # 2-5 items expected

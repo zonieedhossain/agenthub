@@ -6,20 +6,32 @@
     <p>Pick a profession, sign in for that agent only, and start chatting.</p>
 </section>
 <div id="catalog" class="catalog-list"></div>
-
+<div id="pagination" class="pagination"></div>
 {% endblock %}
 {% block scripts %}
 <script>
-    fetch('/agents').then(r => r.json()).then(agents => {
-      const el = document.getElementById('catalog');
-      el.innerHTML = agents.map(a => `
-        <a class="row" href="/agents/${a.slug}">
-          <span class="body">
-            <span class="prof">${a.profession}</span><br>
-            <span class="ind">${a.industry}</span>
-          </span>
-          <span class="arrow">→</span>
-        </a>`).join('');
-    });
+    let currentPage = 1;
+
+    function loadPage(page) {
+      currentPage = page;
+      fetch(`/agents?page=${page}&limit=20`).then(r => r.json()).then(data => {
+        document.getElementById('catalog').innerHTML = data.items.map(a => `
+          <a class="row" href="/agents/${a.slug}">
+            <span class="body">
+              <span class="prof">${a.profession}</span><br>
+              <span class="ind">${a.industry}</span>
+            </span>
+            <span class="arrow">→</span>
+          </a>`).join('');
+
+        document.getElementById('pagination').innerHTML = `
+          <button ${data.page <= 1 ? 'disabled' : ''} onclick="loadPage(${data.page - 1})">← Prev</button>
+          <span>Page ${data.page} of ${data.total_pages} (${data.total} agents)</span>
+          <button ${data.page >= data.total_pages ? 'disabled' : ''} onclick="loadPage(${data.page + 1})">Next →</button>
+        `;
+      });
+    }
+
+    loadPage(1);
 </script>
 {% endblock %}

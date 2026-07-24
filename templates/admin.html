@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Admin — AgentHub{% endblock %}
+{% block content %}
+<h1 style="font-family:'Bricolage Grotesque';font-size:24px;margin:20px 0">Admin — Agents</h1>
+
+<div class="card">
+    <div class="agent-title" style="font-size:18px">Add a new agent</div>
+    <label>Number</label><input id="number" type="number">
+    <label>Industry</label><input id="industry">
+    <label>Profession</label><input id="profession">
+    <div id="subs"></div>
+    <button class="btn ghost" type="button" onclick="addSubRow()">+ Add sub-agent</button>
+    <div class="err" id="err"></div>
+    <button class="btn" style="width:100%;margin-top:14px" onclick="submitAgent()">Create / Update Agent</button>
+</div>
+
+<div id="agentList" style="margin-top:24px"></div>
+{% endblock %}
+{% block scripts %}
+<script>
+    function authHeader() {
+      const u = prompt("Admin username:");
+      const p = prompt("Admin password:");
+      return "Basic " + btoa(`${u}:${p}`);
+    }
+    let auth = null;
+
+    function addSubRow() {
+      const div = document.createElement('div');
+      div.className = 'sub-row';
+      div.innerHTML = `<input placeholder="Sub-agent name" class="sname"> <input placeholder="Task" class="stask">`;
+      document.getElementById('subs').appendChild(div);
+    }
+    addSubRow(); addSubRow();
+
+    async function submitAgent() {
+      if (!auth) auth = authHeader();
+      const subs = [...document.querySelectorAll('#subs .sub-row')].map(row => ({
+        name: row.querySelector('.sname').value,
+        task: row.querySelector('.stask').value,
+      })).filter(s => s.name && s.task);
+
+      const body = {
+        number: parseInt(document.getElementById('number').value),
+        industry: document.getElementById('industry').value,
+        profession: document.getElementById('profession').value,
+        sub_agents: subs,
+      };
+
+      const res = await fetch('/admin/agents', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'Authorization': auth},
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      document.getElementById('err').textContent = res.ok ? '' : (data.detail || 'Failed');
+      if (res.ok) { alert(data.message); loadAgents(); }
+    }
+
+    async function loadAgents() {
+      if (!auth) auth = authHeader();
+      const res = await fetch('/admin/stats', { headers: {'Authorization': auth} });
+      const data = await res.json();
+      document.getElementById('agentList').innerHTML =
+        '<table style="width:100%;border-collapse:collapse">' +
+        data.map(r => `<tr><td style="padding:6px 0">${r.agent}</td><td>${r.requests} reqs</td><td>${r.tokens} tokens</td></tr>`).join('') +
+        '</table>';
+    }
+    loadAgents();
+</script>
+{% endblock %}

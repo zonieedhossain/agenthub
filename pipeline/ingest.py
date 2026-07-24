@@ -97,63 +97,68 @@ Your specialization: {sub_task}
 
 Answer only from this specialization. Stay in character, be concise and practical."""
 
+def upsert_agent(session, number: int, industry: str, profession: str, subs_data: list[tuple[str, str]]):
+    """
+    Core pipeline logic: given one agent's raw data, generate its system
+    prompt and its sub-agents' prompts, then create-or-update in the DB.
+    Used by BOTH the CSV batch import (run()) and the admin single-agent
+    route — one code path, not two.
+    """
+    slug = slugify(profession)
+    capabilities = "\n".join(f"- {n}: {t}" for n, t in subs_data)
+    system_prompt = MAIN_PROMPT.format(profession=profession, industry=industry, capabilities=capabilities)
+
+    agent = session.query(Agent).filter_by(slug=slug).first()
+    if not agent:
+        agent = Agent(slug=slug, number=number, industry=industry, profession=profession,
+                      description=f"AI assistant for {profession}s in {industry}.",
+                      system_prompt=system_prompt)
+        session.add(agent)
+        session.flush()
+    else:
+        agent.industry = industry
+        agent.system_prompt = system_prompt
+
+    for name, task in subs_data:
+        name = repair_truncated_name(name, industry)
+        sub_slug = slugify(name)
+        sub = session.query(SubAgent).filter_by(agent_id=agent.id, slug=sub_slug).first()
+        sub_prompt = SUB_PROMPT.format(sub_name=name, profession=profession, industry=industry, sub_task=task)
+        if not sub:
+            session.add(SubAgent(agent_id=agent.id, slug=sub_slug, name=name, task=task, system_prompt=sub_prompt))
+        else:
+            sub.task = task
+            sub.system_prompt = sub_prompt
+
+    return agent
 
 def run(xlsx_path: str):
     df = pd.read_excel(xlsx_path)
     session = SessionLocal()
-
     try:
         for _, row in df.iterrows():
             industry = clean(row["Industry"])
             profession = clean(row["Profession"])
-            slug = slugify(profession)
 
             subs_data = []
             for i in range(1, 5):
                 name = clean(row[f"Agent {i}"])
                 task = clean(row[f"Agent {i} Task"])
-                if not name or not task:
-                    continue
-                name = repair_truncated_name(name, industry)
-                subs_data.append((name, task))
+                if name and task:
+                    subs_data.append((name, task))
 
-            capabilities = "\n".join(f"- {n}: {t}" for n, t in subs_data)
-            system_prompt = MAIN_PROMPT.format(profession=profession, industry=industry, capabilities=capabilities)
-
-            agent = session.query(Agent).filter_by(slug=slug).first()
-            if not agent:
-                agent = Agent(slug=slug, number=int(row["#"]), industry=industry,
-                              profession=profession, description=f"AI assistant for {profession}s in {industry}.",
-                              system_prompt=system_prompt)
-                session.add(agent)
-                session.flush()
-            else:
-                agent.industry = industry
-                agent.system_prompt = system_prompt
-
-            for name, task in subs_data:
-                sub_slug = slugify(name)
-                sub = session.query(SubAgent).filter_by(agent_id=agent.id, slug=sub_slug).first()
-                sub_prompt = SUB_PROMPT.format(sub_name=name, profession=profession, industry=industry, sub_task=task)
-                if not sub:
-                    session.add(SubAgent(agent_id=agent.id, slug=sub_slug, name=name, task=task, system_prompt=sub_prompt))
-                else:
-                    sub.task = task
-                    sub.system_prompt = sub_prompt
+            upsert_agent(session, int(row["#"]), industry, profession, subs_data)
 
         session.commit()
         count = session.query(Agent).count()
         sub_count = session.query(SubAgent).count()
         print(f"Seeded {count} agents, {sub_count} sub-agents")
-
     except Exception as e:
-        session.rollback()   # undo any partial changes from this run
+        session.rollback()
         print("Seeding failed, rolled back:", e)
-        raise                # re-raise so the caller (e.g. app startup) knows it failed
-
+        raise
     finally:
-        session.close()      # ALWAYS runs — releases the DB connection either way
-
+        session.close()
 
 if __name__ == "__main__":
     init_db()
