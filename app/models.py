@@ -14,8 +14,13 @@ class Agent(Base):
     description = Column(Text, nullable=False)
     system_prompt = Column(Text, nullable=False)
     is_active = Column(Integer, default=1)
-    created_at = Column(TIMESTAMP, server_default=func.now())
-    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
+    # default= (client-side, computed by SQLAlchemy at INSERT time), not
+    # server_default= — these columns were added to an already-seeded table via
+    # a raw ALTER TABLE with no DB-level DEFAULT clause, so server_default would
+    # silently insert NULL on any row created by a process that doesn't also
+    # re-run that DDL. default= works regardless of how the column got there.
+    created_at = Column(TIMESTAMP, default=func.now())
+    updated_at = Column(TIMESTAMP, default=func.now(), onupdate=func.now())
 
     sub_agents = relationship("SubAgent", back_populates="agent")
 
@@ -29,8 +34,8 @@ class SubAgent(Base):
     name = Column(String, nullable=False)
     task = Column(Text, nullable=False)
     system_prompt = Column(Text, nullable=False)
-    created_at = Column(TIMESTAMP, server_default=func.now())
-    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
+    created_at = Column(TIMESTAMP, default=func.now())
+    updated_at = Column(TIMESTAMP, default=func.now(), onupdate=func.now())
 
     agent = relationship("Agent", back_populates="sub_agents")
 
