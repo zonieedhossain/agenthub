@@ -16,10 +16,11 @@
             </div>
 
             <label>Email</label>
-            <div class="input-group">
+            <div class="input-group" id="emailGroup">
                 <span class="input-icon">✉️</span>
                 <input id="email" type="email" placeholder="you@example.com" autocomplete="email">
             </div>
+            <div class="field-hint" id="emailHint"></div>
 
             <label>Password</label>
             <div class="input-group">
@@ -62,9 +63,40 @@
       btn.textContent = showing ? 'Show' : 'Hide';
     }
 
+    // Same shape of check the backend's EmailStr does (valid local@domain.tld
+    // format) — not a guarantee of deliverability, just catches obviously
+    // malformed input before it round-trips to the server.
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    function validateEmail() {
+      const input = document.getElementById('email');
+      const group = document.getElementById('emailGroup');
+      const hint = document.getElementById('emailHint');
+      const value = input.value.trim();
+      const valid = value === '' || EMAIL_RE.test(value);
+      group.classList.toggle('invalid', !valid);
+      hint.textContent = valid ? '' : 'Enter a valid email address (e.g. you@example.com)';
+      return valid && value !== '';
+    }
+
+    document.getElementById('email').addEventListener('input', validateEmail);
+    document.getElementById('email').addEventListener('blur', validateEmail);
+
     async function submitAuth() {
-      const email = document.getElementById('email').value;
+      const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
+
+      if (!validateEmail()) {
+        toast(email ? 'Enter a valid email address' : 'Email is required', 'error');
+        document.getElementById('email').focus();
+        return;
+      }
+      if (!password) {
+        toast('Password is required', 'error');
+        document.getElementById('password').focus();
+        return;
+      }
+
       const res = await fetch(`/agents/${slug}/${mode}`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
