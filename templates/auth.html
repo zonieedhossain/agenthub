@@ -2,19 +2,34 @@
 {% block title %}Sign in — AgentHub{% endblock %}
 {% block content %}
 <a class="back" href="/agents/{{ slug }}">← Back</a>
-<div class="center-page">
-    <div class="card auth-card center-card">
-        <div class="app-icon lg" id="authIcon" style="margin:0 auto 14px">?</div>
-        <div class="auth-tabs">
-            <button class="tab on" onclick="setMode('login')">Log in</button>
-            <button class="tab" onclick="setMode('signup')">Sign up</button>
+<div class="auth-wrap">
+    <div class="auth-blob" id="authBlob"></div>
+    <div class="center-page">
+        <div class="card auth-card center-card">
+            <div class="app-icon lg" id="authIcon" style="margin:0 auto 16px">?</div>
+            <div class="auth-heading" id="authHeading">Welcome back</div>
+            <div class="auth-sub" id="authSub">Sign in to continue this conversation</div>
+
+            <div class="auth-tabs">
+                <button class="tab on" data-mode="login" onclick="setMode('login', this)">Log in</button>
+                <button class="tab" data-mode="signup" onclick="setMode('signup', this)">Sign up</button>
+            </div>
+
+            <label>Email</label>
+            <div class="input-group">
+                <span class="input-icon">✉️</span>
+                <input id="email" type="email" placeholder="you@example.com" autocomplete="email">
+            </div>
+
+            <label>Password</label>
+            <div class="input-group">
+                <span class="input-icon">🔒</span>
+                <input id="password" type="password" placeholder="••••••••" autocomplete="current-password">
+                <button type="button" class="input-toggle" id="pwdToggle" onclick="togglePassword()">Show</button>
+            </div>
+
+            <button class="btn" style="width:100%" onclick="submitAuth()">Continue</button>
         </div>
-        <label>Email</label>
-        <input id="email" type="email" placeholder="you@example.com">
-        <label>Password</label>
-        <input id="password" type="password" placeholder="••••••••">
-        <div class="err" id="err"></div>
-        <button class="btn" style="width:100%" onclick="submitAuth()">Continue</button>
     </div>
 </div>
 {% endblock %}
@@ -25,15 +40,28 @@
 
     fetch(`/api/agents/${slug}`).then(r => r.json()).then(a => {
       const icon = document.getElementById('authIcon');
-      icon.style.background = colorFor(a.profession);
+      const color = colorFor(a.profession);
+      icon.style.background = color;
       icon.textContent = initials(a.profession);
+      document.getElementById('authBlob').style.background = color;
+      document.getElementById('authSub').textContent = `Sign in to chat with the ${a.profession} Agent`;
     });
 
-    function setMode(m) {
+    function setMode(m, btn) {
       mode = m;
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
-      event.target.classList.add('on');
+      btn.classList.add('on');
+      document.getElementById('authHeading').textContent = m === 'signup' ? 'Create your account' : 'Welcome back';
     }
+
+    function togglePassword() {
+      const input = document.getElementById('password');
+      const btn = document.getElementById('pwdToggle');
+      const showing = input.type === 'text';
+      input.type = showing ? 'password' : 'text';
+      btn.textContent = showing ? 'Show' : 'Hide';
+    }
+
     async function submitAuth() {
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
@@ -44,9 +72,7 @@
       });
       const data = await res.json();
       if (!res.ok) {
-        const msg = apiErrorMessage(res.status, data);
-        document.getElementById('err').textContent = msg;
-        toast(msg, 'error');
+        toast(apiErrorMessage(res.status, data), 'error');
         return;
       }
       localStorage.setItem(`token_${slug}`, data.access_token);

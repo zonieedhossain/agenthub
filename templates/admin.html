@@ -9,7 +9,6 @@
         <label>Password</label>
         <input id="adminPass" type="password" autocomplete="current-password"
                onkeydown="if(event.key==='Enter')adminLogin()">
-        <div class="err" id="loginErr"></div>
         <button class="btn" style="width:100%" onclick="adminLogin()">Sign in</button>
     </div>
 </div>
@@ -31,7 +30,6 @@
         <div id="subs"></div>
         <button class="btn ghost" type="button" onclick="addSubRow()">+ Add sub-agent</button>
         <div id="dupWarning"></div>
-        <div class="err" id="err"></div>
         <button class="btn" id="submitBtn" style="width:100%;margin-top:14px" onclick="submitAgent()">Create agent</button>
     </div>
 
@@ -59,22 +57,17 @@
       const u = document.getElementById('adminUser').value;
       const p = document.getElementById('adminPass').value;
       const candidate = "Basic " + btoa(unescape(encodeURIComponent(`${u}:${p}`)));
-      const errEl = document.getElementById('loginErr');
-      errEl.textContent = '';
 
       let res, data;
       try {
         res = await fetch('/admin/stats', { headers: { Authorization: candidate } });
         data = await res.json().catch(() => ({}));
       } catch (e) {
-        errEl.textContent = 'Could not reach the server';
         toast('Could not reach the server', 'error');
         return;
       }
       if (!res.ok) {
-        const msg = apiErrorMessage(res.status, data);
-        errEl.textContent = msg;
-        toast(msg, 'error');
+        toast(apiErrorMessage(res.status, data), 'error');
         return;
       }
 
@@ -146,13 +139,10 @@
       const data = await res.json();
 
       if (!res.ok) {
-        const msg = apiErrorMessage(res.status, data);
-        document.getElementById('err').textContent = msg;
-        toast(msg, 'error');
+        toast(apiErrorMessage(res.status, data), 'error');
         return;
       }
 
-      document.getElementById('err').textContent = '';
       document.getElementById('dupWarning').innerHTML = '';
       document.getElementById('submitBtn').textContent = 'Create agent';
       pendingUpdateSlug = null;

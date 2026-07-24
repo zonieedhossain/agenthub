@@ -76,7 +76,23 @@ label{display:block;font-size:13px;font-weight:600;margin:12px 0 4px}
 input{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:10px;font-size:15px;
   font-family:inherit;transition:border-color .15s ease}
 input:focus{outline:none;border-color:var(--accent)}
-.err{color:#D64545;font-size:13px;margin-top:8px;min-height:16px}
+
+/* ---- auth page ---- */
+.auth-wrap{position:relative}
+.auth-blob{position:absolute;top:-60px;left:50%;transform:translateX(-50%);width:340px;height:340px;
+  border-radius:50%;filter:blur(70px);opacity:.22;background:var(--accent);pointer-events:none;z-index:0}
+.auth-card{position:relative;z-index:1;animation:auth-in .35s ease}
+@keyframes auth-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.auth-heading{font-family:"Bricolage Grotesque";font-size:20px;font-weight:700}
+.auth-sub{color:var(--muted);font-size:13.5px;margin-top:4px;margin-bottom:18px}
+.input-group{position:relative;display:flex;align-items:center}
+.input-group input{padding-left:40px}
+.input-icon{position:absolute;left:13px;font-size:14px;pointer-events:none}
+.input-toggle{position:absolute;right:6px;background:none;border:none;color:var(--accent);
+  font-size:12.5px;font-weight:600;cursor:pointer;padding:6px 8px}
+@media (max-width:640px){
+  .auth-blob{width:240px;height:240px}
+}
 
 /* ---- chat: real chat-app layout ---- */
 .chat-app{display:flex;height:calc(100dvh - 130px);min-height:420px;margin-top:16px;
