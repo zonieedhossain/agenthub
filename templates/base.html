@@ -16,6 +16,21 @@
 <main class="wrap">
     {% block content %}{% endblock %}
 </main>
+<div id="toastStack" class="toast-stack"></div>
+<script>
+    function toast(message, type = 'success') {
+      const stack = document.getElementById('toastStack');
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      el.innerHTML = `<span class="toast-icon">${type === 'success' ? '✓' : '!'}</span><span>${esc(message)}</span>`;
+      stack.appendChild(el);
+      requestAnimationFrame(() => el.classList.add('in'));
+      setTimeout(() => {
+        el.classList.remove('in');
+        setTimeout(() => el.remove(), 250);
+      }, 3200);
+    }
+</script>
 <script>
     function esc(s) {
       return String(s).replace(/[&<>"']/g, c => ({

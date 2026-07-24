@@ -141,3 +141,38 @@ input:focus{outline:none;border-color:var(--accent)}
   .card{padding:18px}
   .app-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
 }
+
+/* ---- toast notifications ---- */
+.toast-stack{position:fixed;top:16px;right:16px;display:flex;flex-direction:column;gap:8px;z-index:100}
+.toast{display:flex;align-items:center;gap:10px;background:var(--ink);color:#fff;padding:12px 16px;
+  border-radius:12px;font-size:13.5px;font-weight:600;box-shadow:var(--shadow-hover);
+  opacity:0;transform:translateY(-8px) scale(.97);transition:opacity .2s ease,transform .2s ease;max-width:320px}
+.toast.in{opacity:1;transform:translateY(0) scale(1)}
+.toast.error{background:#D64545}
+.toast-icon{width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.2);
+  display:flex;align-items:center;justify-content:center;font-size:11px;flex:none}
+@media (max-width:640px){
+  .toast-stack{left:16px;right:16px;top:12px}
+  .toast{max-width:none}
+}
+
+/* ---- admin dashboard ---- */
+.admin-header{display:flex;align-items:center;justify-content:space-between;margin:20px 0}
+.admin-title{font-family:"Bricolage Grotesque";font-size:24px;font-weight:700}
+.session-badge{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+.session-badge .dot{width:8px;height:8px;border-radius:50%;background:#00B894}
+.link-btn{background:none;border:none;color:var(--accent);font-weight:600;font-size:13px;
+  cursor:pointer;padding:0;text-decoration:underline}
+.warn-box{background:#FFF6E5;border:1px solid #F5D68B;color:#7A5B00;border-radius:12px;
+  padding:12px 14px;font-size:13px;margin-top:12px}
+.stats-table{width:100%;border-collapse:collapse}
+.stats-table tr{border-bottom:1px solid var(--line)}
+.stats-table tr:last-child{border-bottom:none}
+.stats-table td{padding:10px 4px;font-size:13.5px}
+.stats-table td.num{color:var(--muted);text-align:right}
+.recent-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:10px}
+.recent-card{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;
+  padding:10px 12px;background:var(--surface)}
+.recent-card .app-name{font-size:13px}
+.recent-card .app-industry{font-size:11.5px}
+.empty-note{color:var(--muted);font-size:13px;padding:10px 0}

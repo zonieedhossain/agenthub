@@ -46,7 +46,8 @@
         return;
       }
       localStorage.setItem(`token_${slug}`, data.access_token);
-      window.location.href = `/agents/${slug}/chat`;
+      toast(mode === 'signup' ? 'Account created — signing you in…' : 'Signed in successfully');
+      setTimeout(() => window.location.href = `/agents/${slug}/chat`, 550);
     }
 </script>
 {% endblock %}

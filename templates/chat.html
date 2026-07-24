@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Chat — AgentHub{% endblock %}
 {% block content %}
-<a class="back" href="/agents/{{ slug }}">← {{ slug }}</a>
+<div style="display:flex;justify-content:space-between;align-items:center">
+    <a class="back" href="/agents/{{ slug }}">← {{ slug }}</a>
+    <button class="link-btn" onclick="logout()">Log out</button>
+</div>
 <div class="chat-app">
     <aside class="chat-sidebar" id="subtabs"></aside>
     <div class="chat-main">
@@ -19,6 +22,11 @@
     const slug = "{{ slug }}";
     const token = localStorage.getItem(`token_${slug}`);
     if (!token) window.location.href = `/agents/${slug}/auth`;
+
+    function logout() {
+      localStorage.removeItem(`token_${slug}`);
+      window.location.href = `/agents/${slug}/auth`;
+    }
 
     let activeSub = null;
     let activeName = 'Main agent';
