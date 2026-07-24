@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_db
 from app.admin_auth import verify_admin
+from app.models import Agent, UsageLog
 from app.schemas import AdminAgentInput
 from pipeline.ingest import upsert_agent
 
