@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}AgentHub — Catalog{% endblock %}
+{% block content %}
+<section class="hero">
+    <h1>A catalog of professional AI agents.</h1>
+    <p>Pick a profession, sign in for that agent only, and start chatting.</p>
+</section>
+<div id="catalog" class="catalog-list"></div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+    fetch('/agents').then(r => r.json()).then(agents => {
+      const el = document.getElementById('catalog');
+      el.innerHTML = agents.map(a => `
+        <a class="row" href="/agents/${a.slug}">
+          <span class="body">
+            <span class="prof">${a.profession}</span><br>
+            <span class="ind">${a.industry}</span>
+          </span>
+          <span class="arrow">→</span>
+        </a>`).join('');
+    });
+</script>
+{% endblock %}

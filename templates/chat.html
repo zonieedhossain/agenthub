@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Chat — AgentHub{% endblock %}
+{% block content %}
+<div class="chat-shell">
+    <a class="back" href="/agents/{{ slug }}">← {{ slug }}</a>
+    <div id="subtabs" class="subtabs"></div>
+    <div id="msgs" class="msgs"></div>
+    <div class="composer">
+        <input id="chatin" placeholder="Type a message…" onkeydown="if(event.key==='Enter')send()">
+        <button class="btn" onclick="send()">Send</button>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+    const slug = "{{ slug }}";
+    const token = localStorage.getItem(`token_${slug}`);
+    if (!token) window.location.href = `/agents/${slug}/auth`;
+
+    let activeSub = null;
+    let history = [];
+
+    fetch(`/agents/${slug}`).then(r => r.json()).then(a => {
+      const tabs = document.getElementById('subtabs');
+      tabs.innerHTML = `<button class="subtab on" onclick="pick(null,this)">Main agent</button>` +
+        a.sub_agents.map(s => `<button class="subtab" onclick="pick(${s.id},this)">${s.name}</button>`).join('');
+    });
+
+    function pick(id, btn) {
+      activeSub = id;
+      history = [];
+      document.querySelectorAll('.subtab').forEach(t => t.classList.remove('on'));
+      btn.classList.add('on');
+      draw();
+    }
+
+    function draw() {
+      const box = document.getElementById('msgs');
+      box.innerHTML = history.map(m =>
+        `<div class="msg ${m.role}">${m.content}</div>`).join('');
+      box.scrollTop = box.scrollHeight;
+    }
+
+    async function send() {
+      const input = document.getElementById('chatin');
+      const message = input.value.trim();
+      if (!message) return;
+      input.value = '';
+      history.push({role: 'user', content: message});
+      draw();
+
+      const res = await fetch(`/agents/${slug}/chat`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+        body: JSON.stringify({message, sub_agent_id: activeSub})
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        history.push({role: 'bot', content: 'Error: ' + (data.detail || 'failed')});
+      } else {
+        history.push({role: 'bot', content: data.reply});
+      }
+      draw();
+    }
+</script>
+{% endblock %}

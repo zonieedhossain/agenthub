@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ slug }} — AgentHub{% endblock %}
+{% block content %}
+<a class="back" href="/">← All agents</a>
+<div class="card" id="detail">Loading…</div>
+{% endblock %}
+{% block scripts %}
+<script>
+    const slug = "{{ slug }}";
+    fetch(`/agents/${slug}`).then(r => r.json()).then(a => {
+      document.getElementById('detail').innerHTML = `
+        <div class="agent-title">${a.profession} Agent</div>
+        <div class="agent-ind">${a.industry}</div>
+        <div class="sub-list">
+          ${a.sub_agents.map(s => `
+            <div class="sub-item">
+              <b>${s.name}</b>
+              <p>${s.task}</p>
+            </div>`).join('')}
+        </div>
+        <a class="btn" href="/agents/${slug}/auth">Sign in to this agent</a>
+      `;
+    });
+</script>
+{% endblock %}

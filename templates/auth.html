@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Sign in — AgentHub{% endblock %}
+{% block content %}
+<a class="back" href="/agents/{{ slug }}">← Back</a>
+<div class="card" style="max-width:420px">
+    <div class="auth-tabs">
+        <button class="tab on" onclick="setMode('login')">Log in</button>
+        <button class="tab" onclick="setMode('signup')">Sign up</button>
+    </div>
+    <label>Email</label>
+    <input id="email" type="email" placeholder="you@example.com">
+    <label>Password</label>
+    <input id="password" type="password" placeholder="••••••••">
+    <div class="err" id="err"></div>
+    <button class="btn" style="width:100%" onclick="submitAuth()">Continue</button>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+    const slug = "{{ slug }}";
+    let mode = "login";
+    function setMode(m) {
+      mode = m;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+      event.target.classList.add('on');
+    }
+    async function submitAuth() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const res = await fetch(`/agents/${slug}/${mode}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({email, password})
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        document.getElementById('err').textContent = data.detail || 'Something went wrong';
+        return;
+      }
+      localStorage.setItem(`token_${slug}`, data.access_token);
+      window.location.href = `/agents/${slug}/chat`;
+    }
+</script>
+{% endblock %}
