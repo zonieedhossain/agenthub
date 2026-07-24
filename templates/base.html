@@ -30,6 +30,26 @@
         setTimeout(() => el.remove(), 250);
       }, 3200);
     }
+
+    const HTTP_STATUS_LABELS = {
+      400: 'Bad Request', 401: 'Unauthorized', 403: 'Forbidden', 404: 'Not Found',
+      409: 'Conflict', 422: 'Validation Error', 429: 'Too Many Requests',
+      500: 'Server Error', 502: 'Bad Gateway', 503: 'Service Unavailable',
+    };
+
+    // Every backend error shape in one place: FastAPI's {detail: "..."},
+    // Pydantic's {detail: [{msg: "..."}]} validation array, and slowapi's
+    // rate-limit responses which use {error: "..."} instead of "detail" —
+    // a mismatch that silently showed "failed" for real 429s before this.
+    function apiErrorMessage(status, data) {
+      const label = HTTP_STATUS_LABELS[status] || `Error ${status}`;
+      let detail;
+      if (Array.isArray(data?.detail)) detail = data.detail.map(d => d.msg).join('; ');
+      else if (typeof data?.detail === 'string') detail = data.detail;
+      else if (typeof data?.error === 'string') detail = data.error;
+      else detail = 'Something went wrong';
+      return `${status} ${label} — ${detail}`;
+    }
 </script>
 <script>
     function esc(s) {

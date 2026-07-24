@@ -61,7 +61,8 @@ header{background:var(--surface);border-bottom:1px solid var(--line);position:st
 .btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--line)}
 .btn.ghost:hover{border-color:var(--accent);filter:none}
 .sub-row{display:flex;gap:8px;margin-bottom:8px}
-.center-card{max-width:420px;margin:24px auto 0}
+.center-card{max-width:420px;margin:0}
+.center-page{display:flex;align-items:center;justify-content:center;min-height:calc(100dvh - 220px)}
 .back{display:inline-block;margin-top:16px;color:var(--muted);text-decoration:none;font-size:14px}
 .back:hover{color:var(--ink)}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px;
@@ -93,7 +94,8 @@ input:focus{outline:none;border-color:var(--accent)}
 .chat-header-sub{font-size:12px;color:var(--muted)}
 
 .msgs{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:16px 18px}
-.empty-chat{margin:auto;color:var(--muted);font-size:14px;text-align:center}
+.empty-chat{margin:auto;color:var(--muted);font-size:14px;text-align:center;max-width:340px;line-height:1.6}
+.empty-chat b{color:var(--ink)}
 .msg-row{display:flex;gap:8px;align-items:flex-end}
 .msg-row.user{justify-content:flex-end}
 .msg{max-width:74%;padding:10px 14px;border-radius:16px;font-size:14.5px;line-height:1.45}
@@ -142,6 +144,8 @@ input:focus{outline:none;border-color:var(--accent)}
   .msg{max-width:88%}
   .card{padding:18px}
   .app-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  .admin-header{flex-direction:column;align-items:flex-start;gap:6px}
+  .sub-row{flex-direction:column;gap:6px}
 }
 
 /* ---- toast notifications ---- */

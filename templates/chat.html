@@ -30,19 +30,21 @@
 
     let activeSub = null;
     let activeName = 'Main agent';
+    let activeRole = ''; // description (main agent) or task (sub-agent) — makes it obvious what you're talking to
 
     let history = [];
 
     fetch(`/api/agents/${slug}`).then(r => r.json()).then(a => {
       window.__agentProfession = a.profession;
+      activeRole = a.description || '';
       const tabs = document.getElementById('subtabs');
       tabs.innerHTML =
-        `<div class="sidebar-item on" data-id="" data-name="Main agent">
+        `<div class="sidebar-item on" data-id="" data-name="Main agent" data-role="${esc(a.description || '')}">
            <div class="app-icon sm" style="background:${colorFor(a.profession)}">${esc(initials(a.profession))}</div>
            <span>Main agent</span>
          </div>` +
         a.sub_agents.map(s => `
-          <div class="sidebar-item" data-id="${s.id}" data-name="${esc(s.name)}">
+          <div class="sidebar-item" data-id="${s.id}" data-name="${esc(s.name)}" data-role="${esc(s.task)}">
             <div class="app-icon sm" style="background:${colorFor(s.name)}">${esc(initials(s.name))}</div>
             <span>${esc(s.name)}</span>
           </div>`).join('');
@@ -58,16 +60,19 @@
     document.getElementById('subtabs').addEventListener('click', (e) => {
       const item = e.target.closest('.sidebar-item');
       if (!item) return;
-      pick(item.dataset.id ? Number(item.dataset.id) : null, item.dataset.name, item);
+      pick(item.dataset.id ? Number(item.dataset.id) : null, item.dataset.name, item.dataset.role, item);
     });
 
+    // Subtitle shows what this agent/sub-agent actually does (its description
+    // or specialization task), not just a repeated name — so it's clear what
+    // you're talking to without needing to go read the catalog first.
     function drawHeader() {
       const seed = activeSub ? activeName : (window.__agentProfession || slug);
       document.getElementById('chatHeader').innerHTML = `
         <div class="app-icon sm" style="background:${colorFor(seed)}">${esc(initials(seed))}</div>
         <div>
           <div class="chat-header-title">${esc(activeName)}</div>
-          <div class="chat-header-sub">${esc(window.__agentProfession || slug)}</div>
+          <div class="chat-header-sub">${esc(activeRole || window.__agentProfession || slug)}</div>
         </div>
       `;
     }
@@ -87,9 +92,10 @@
       draw();
     }
 
-    function pick(id, name, el) {
+    function pick(id, name, role, el) {
       activeSub = id;
       activeName = name;
+      activeRole = role;
       document.querySelectorAll('.sidebar-item').forEach(t => t.classList.remove('on'));
       el.classList.add('on');
       drawHeader();
@@ -99,7 +105,8 @@
     function draw() {
       const box = document.getElementById('msgs');
       if (!history.length) {
-        box.innerHTML = `<div class="empty-chat">👋 Say hello to get started.</div>`;
+        box.innerHTML = `<div class="empty-chat">👋 You're chatting with the <b>${esc(activeName)}</b>.
+          ${activeRole ? esc(activeRole) : ''}<br>Say hello to get started.</div>`;
         return;
       }
       box.innerHTML = history.map(m => `
@@ -167,7 +174,7 @@
         if (res.ok) {
           history.push({role: 'bot', content: data.reply});
         } else {
-          const msg = Array.isArray(data.detail) ? data.detail.map(d => d.msg).join('; ') : (data.detail || 'failed');
+          const msg = apiErrorMessage(res.status, data);
           history.push({role: 'bot', content: 'Error: ' + msg});
           toast(msg, 'error');
         }

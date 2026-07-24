@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Admin — AgentHub{% endblock %}
 {% block content %}
-<div id="loginGate">
+<div id="loginGate" class="center-page">
     <div class="card center-card">
         <div class="agent-title" style="font-size:18px">Admin sign in</div>
         <label>Username</label>
@@ -62,16 +62,17 @@
       const errEl = document.getElementById('loginErr');
       errEl.textContent = '';
 
-      let res;
+      let res, data;
       try {
         res = await fetch('/admin/stats', { headers: { Authorization: candidate } });
+        data = await res.json().catch(() => ({}));
       } catch (e) {
         errEl.textContent = 'Could not reach the server';
         toast('Could not reach the server', 'error');
         return;
       }
       if (!res.ok) {
-        const msg = res.status === 401 ? 'Invalid admin credentials' : 'Sign in failed';
+        const msg = apiErrorMessage(res.status, data);
         errEl.textContent = msg;
         toast(msg, 'error');
         return;
@@ -81,14 +82,14 @@
       document.getElementById('loginGate').style.display = 'none';
       document.getElementById('adminApp').style.display = 'block';
       toast('Signed in as admin');
-      renderStats(await res.json());
+      renderStats(data);
       loadRecent();
     }
 
     function adminLogout() {
       auth = null;
       document.getElementById('adminApp').style.display = 'none';
-      document.getElementById('loginGate').style.display = 'block';
+      document.getElementById('loginGate').style.display = 'flex';
       document.getElementById('adminUser').value = '';
       document.getElementById('adminPass').value = '';
       toast('Logged out');
@@ -145,9 +146,7 @@
       const data = await res.json();
 
       if (!res.ok) {
-        const msg = Array.isArray(data.detail)
-          ? data.detail.map(d => d.msg).join('; ')
-          : (data.detail || 'Failed to save agent');
+        const msg = apiErrorMessage(res.status, data);
         document.getElementById('err').textContent = msg;
         toast(msg, 'error');
         return;

@@ -2,18 +2,20 @@
 {% block title %}Sign in — AgentHub{% endblock %}
 {% block content %}
 <a class="back" href="/agents/{{ slug }}">← Back</a>
-<div class="card auth-card center-card">
-    <div class="app-icon lg" id="authIcon" style="margin:0 auto 14px">?</div>
-    <div class="auth-tabs">
-        <button class="tab on" onclick="setMode('login')">Log in</button>
-        <button class="tab" onclick="setMode('signup')">Sign up</button>
+<div class="center-page">
+    <div class="card auth-card center-card">
+        <div class="app-icon lg" id="authIcon" style="margin:0 auto 14px">?</div>
+        <div class="auth-tabs">
+            <button class="tab on" onclick="setMode('login')">Log in</button>
+            <button class="tab" onclick="setMode('signup')">Sign up</button>
+        </div>
+        <label>Email</label>
+        <input id="email" type="email" placeholder="you@example.com">
+        <label>Password</label>
+        <input id="password" type="password" placeholder="••••••••">
+        <div class="err" id="err"></div>
+        <button class="btn" style="width:100%" onclick="submitAuth()">Continue</button>
     </div>
-    <label>Email</label>
-    <input id="email" type="email" placeholder="you@example.com">
-    <label>Password</label>
-    <input id="password" type="password" placeholder="••••••••">
-    <div class="err" id="err"></div>
-    <button class="btn" style="width:100%" onclick="submitAuth()">Continue</button>
 </div>
 {% endblock %}
 {% block scripts %}
@@ -42,9 +44,7 @@
       });
       const data = await res.json();
       if (!res.ok) {
-        const msg = Array.isArray(data.detail)
-          ? data.detail.map(d => d.msg).join('; ')
-          : (data.detail || 'Something went wrong');
+        const msg = apiErrorMessage(res.status, data);
         document.getElementById('err').textContent = msg;
         toast(msg, 'error');
         return;
