@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, Header
+from fastapi import Depends, HTTPException, Header, Request
 from jose import JWTError
 from sqlalchemy.orm import Session
 
@@ -15,7 +15,9 @@ def get_db():
         db.close()
 
 
-def get_current_user(slug: str, authorization: str = Header(...), db: Session = Depends(get_db)) -> User:
+def get_current_user(
+    request: Request, slug: str, authorization: str = Header(...), db: Session = Depends(get_db)
+) -> User:
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
     token = authorization.removeprefix("Bearer ").strip()
@@ -38,4 +40,5 @@ def get_current_user(slug: str, authorization: str = Header(...), db: Session = 
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
 
+    request.state.user = user  # lets the rate limiter key by user instead of falling back to IP
     return user
