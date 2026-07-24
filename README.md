@@ -45,10 +45,20 @@ Passwords are hashed with bcrypt (`passlib`), never stored or logged in plaintex
 ### Stack
 
 - **Backend:** FastAPI + SQLAlchemy, Postgres in production (Neon free tier), SQLite for tests
-- **Frontend:** Jinja2-rendered pages + vanilla JS (no build step, no framework) — kept deliberately minimal since the assignment's frontend framework choice was open and the surface area here (catalog, auth, chat, admin) didn't need one
+- **Frontend:** Jinja2-rendered pages + vanilla JS (no build step, no framework) — a Play Store-style catalog grid, a real chat-app layout (sidebar navigation, message avatars, markdown-lite reply formatting, a live "thinking" indicator), and an admin dashboard with toast notifications and inline validation. No frontend framework since the surface area didn't need one; avatars are generated (initials on a color hashed from the agent's name, Slack/Gmail-style) rather than image assets.
 - **LLM:** Google Gemini (`google-genai`, `gemini-flash-latest`)
 - **Rate limiting:** `slowapi`, keyed by authenticated user (falls back to IP only for unauthenticated requests)
 - **Deployment:** Render (`render.yaml`), free tier
+
+### Admin panel
+
+`/admin` is gated by HTTP Basic auth (`ADMIN_USER`/`ADMIN_PASSWORD`) behind a styled sign-in form (not a browser-native prompt). Once signed in:
+
+- **Add/update an agent** through a form that calls the same `upsert_agent()` the CSV pipeline uses (see above) — validated server-side (`app/schemas.py`: minimum lengths, a positive agent number, up to 5 sub-agents) and checked client-side against the existing catalog before submit: if the typed profession already maps to an existing agent, a warning shows what's already there and the submit button relabels to "Update existing agent" instead of silently overwriting it.
+- **Recently added / updated** — pulls the public `/agents` endpoint (already sorted most-recently-updated first) so a freshly added or edited agent is visible immediately, regardless of whether it has any chat activity yet.
+- **Usage** — per-agent request/token counts from `UsageLog`.
+
+Catalog ordering: both the public catalog and each agent's sub-agent list sort by `updated_at desc`, so editing an agent through the admin form brings it back to the top of the catalog.
 
 ## Setup
 
@@ -106,7 +116,9 @@ This project was built with **Claude Code** (Anthropic) as the primary coding as
 - **No HTTPS enforcement in application code** — relies on the hosting platform (Render) terminating TLS, which it does, but the app itself would happily serve plain HTTP if run elsewhere without a proxy in front.
 - **Free-tier cold starts.** Render's free plan spins the instance down after inactivity; the first request afterward is slow. Not fixable without paid hosting.
 - **`upsert_agent` doesn't remove sub-agents missing from a new submission.** Re-adding an agent through `/admin/agents` with a different sub-agent list accumulates rather than replaces — the old ones stay unless you also delete them.
-- **Ad hoc schema migrations, no Alembic.** New columns (`created_at`/`updated_at`) get added to an already-seeded DB via a small guarded `ALTER TABLE` in `init_db()` rather than a real migration tool — fine at this scale, wouldn't scale to a team environment.
+- **Ad hoc schema migrations, no Alembic.** New columns (`created_at`/`updated_at`) get added to an already-seeded DB via a small guarded `ALTER TABLE` in `init_db()` rather than a real migration tool — fine at this scale, wouldn't scale to a team environment. (This approach already bit once: the first version used `server_default=func.now()`, which only takes effect when the DB column itself has a DDL-level default — a raw `ALTER TABLE` doesn't add one, so rows inserted after the migration silently got `NULL` timestamps until it was caught and switched to a client-side `default=`.)
+- **The admin duplicate-agent warning is best-effort, not authoritative.** It mirrors the backend's `slugify()` in JS well enough to catch the common case, but the source of truth is still whatever slug the backend actually computes — the warning is a UX nicety, not a guarantee.
+- **No automated tests for anything added after the original auth/chat coverage** — admin validation, the duplicate-agent check, catalog/sub-agent ordering, and the frontend redesign are all verified manually (including live, in a real browser) but not covered by `pytest`.
 
 ## What I'd do differently with more time
 
