@@ -26,7 +26,11 @@ def get_chat_history(
     query = (
         db.query(Message)
         .filter_by(user_id=current_user.id, agent_id=agent.id, sub_agent_id=sub_agent_id)
-        .order_by(Message.created_at.desc())
+        # id as a secondary key: a user message and its assistant reply are
+        # inserted in the same transaction, and Postgres's now() returns the
+        # same value for the whole transaction — created_at alone can tie
+        # them, leaving their relative order to the DB's whim.
+        .order_by(Message.created_at.desc(), Message.id.desc())
     )
     total = query.count()
     rows = query.offset((page - 1) * limit).limit(limit).all()
@@ -66,7 +70,7 @@ def chat(
     history_rows = (
         db.query(Message)
         .filter_by(user_id=current_user.id, agent_id=agent.id, sub_agent_id=sub_agent.id if sub_agent else None)
-        .order_by(Message.created_at.desc())
+        .order_by(Message.created_at.desc(), Message.id.desc())
         .limit(20)
         .all()
     )
