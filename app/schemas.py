@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 # --- Auth ---
@@ -33,12 +33,28 @@ class ChatResponse(BaseModel):
 # --- Admin ---
 
 class AdminSubAgentInput(BaseModel):
-    name: str
-    task: str
+    name: str = Field(min_length=3, max_length=80)
+    task: str = Field(min_length=5, max_length=300)
+
+    @field_validator("name", "task")
+    @classmethod
+    def strip_and_reject_blank(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("must not be blank")
+        return v
 
 
 class AdminAgentInput(BaseModel):
-    number: int
-    industry: str
-    profession: str
-    sub_agents: list[AdminSubAgentInput]  # 2-5 items expected
+    number: int = Field(gt=0)
+    industry: str = Field(min_length=3, max_length=80)
+    profession: str = Field(min_length=3, max_length=80)
+    sub_agents: list[AdminSubAgentInput] = Field(max_length=5)  # 2-5 expected, hard cap 5
+
+    @field_validator("industry", "profession")
+    @classmethod
+    def strip_and_reject_blank(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("must not be blank")
+        return v
