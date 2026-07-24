@@ -1,5 +1,12 @@
 from pydantic import BaseModel, EmailStr
+from typing import Optional
 
+class ChatRequest(BaseModel):
+    message: str
+    sub_agent_id: Optional[int] = None
+
+class ChatResponse(BaseModel):
+    reply: str
 
 class SignupRequest(BaseModel):
     email: EmailStr
@@ -14,3 +21,4 @@ class LoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
