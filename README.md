@@ -45,6 +45,118 @@ Each agent gets its own login boundary using a **shared auth system, tenant-scop
 
 Passwords are hashed with bcrypt (`passlib`), never stored or logged in plaintext. `.env` (secrets) is gitignored and was never committed.
 
+### System diagrams
+
+**High-level architecture** — one FastAPI app behind Render's TLS, one Postgres instance, one outbound call per chat turn to Gemini. `ingest.py` is a one-shot/re-runnable script, not a long-running service.
+
+```mermaid
+flowchart LR
+    subgraph Runtime["Runtime System"]
+        Browser["Browser (Desktop + Mobile)"] -- HTTPS --> FastAPI["FastAPI App (Render, HTTPS)<br/>Routers: catalog, auth, chat, admin"]
+        FastAPI -- HTML/JSON --> Browser
+        FastAPI -- "reads/writes agents, users, sub_agents, messages" --> PG[("Postgres (Neon)")]
+        FastAPI -- "chat completion request/response" --> Gemini["LLM API (Gemini)"]
+    end
+    Ingest["pipeline/ingest.py"] -. "seeds data (xlsx/csv -> DB rows)" .-> PG
+```
+
+**Login flow** — the isolation check lives here: the JWT payload carries `agent_id`, and every subsequent request re-validates it against the agent named in the URL.
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant F as FastAPI
+    participant P as Postgres
+    B->>F: POST /agents/{slug}/login {email, password}
+    F->>P: SELECT user WHERE email + agent_id
+    P-->>F: user row or none
+    F->>F: verify bcrypt password hash
+    F->>F: create JWT {user_id, agent_id}
+    F-->>B: 200 OK {token}
+```
+
+**Chat flow** — the same isolation check, enforced again on every message, not just at login:
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant F as FastAPI
+    participant P as Postgres
+    participant G as Gemini API
+    B->>F: POST /agents/{slug}/chat {message, sub_agent_id, token}
+    F->>F: decode JWT, check payload.agent_id == agent(slug).id
+    alt mismatch
+        F-->>B: 401 Unauthorized
+    else match
+        F->>P: load system_prompt + recent message history
+        P-->>F: prompt + history
+        F->>G: get_reply(system_prompt, history)
+        G-->>F: assistant reply text
+        F->>P: save user message + assistant reply
+        P-->>F: confirmation
+        F-->>B: 200 OK {reply}
+    end
+```
+
+**Schema** — `UNIQUE(email, agent_id)` on `users` is what makes per-agent login isolation a database constraint, not just an application-level convention:
+
+```mermaid
+erDiagram
+    AGENTS ||--o{ SUB_AGENTS : has
+    AGENTS ||--o{ USERS : has
+    AGENTS ||--o{ MESSAGES : has
+    AGENTS ||--o{ USAGE_LOGS : has
+    USERS ||--o{ MESSAGES : sends
+    USERS ||--o{ USAGE_LOGS : logs
+    SUB_AGENTS ||--o{ MESSAGES : "scoped to"
+
+    AGENTS {
+        int id PK
+        string slug
+        int number
+        string industry
+        string profession
+        text description
+        text system_prompt
+        bool is_active
+        timestamp created_at
+        timestamp updated_at
+    }
+    SUB_AGENTS {
+        int id PK
+        int agent_id FK
+        string slug
+        string name
+        text task
+        text system_prompt
+        timestamp created_at
+        timestamp updated_at
+    }
+    USERS {
+        int id PK
+        string email
+        string password_hash
+        int agent_id FK
+        timestamp created_at
+    }
+    MESSAGES {
+        int id PK
+        int user_id FK
+        int agent_id FK
+        int sub_agent_id FK
+        string role
+        text content
+        timestamp created_at
+    }
+    USAGE_LOGS {
+        int id PK
+        int agent_id FK
+        int user_id FK
+        timestamp timestamp
+        int tokens
+    }
+```
+
 ### Stack, and why each piece
 
 | Choice | What | Why this over the alternatives |
@@ -108,7 +220,12 @@ Re-running it is idempotent — it upserts by slug, so it's safe to run again af
 pytest tests/ -v
 ```
 
-10 tests covering the auth flow (signup, login, duplicate emails, wrong password, and — the important one — cross-agent token isolation) and chat/config resolution (main-agent vs sub-agent system prompt resolution, and rejecting a sub-agent that belongs to a different agent). Tests run against an in-memory SQLite DB via dependency override, no external services required. CI (`.github/workflows/test.yml`) runs this suite on every push/PR to `main`.
+21 tests across three files:
+- `test_auth.py` — signup, login, duplicate emails, wrong password, the short-password rejection, the login rate limit, and — the important one — cross-agent token isolation.
+- `test_chat.py` — chat/config resolution: main-agent vs sub-agent system prompt resolution, and rejecting a sub-agent that belongs to a different agent.
+- `test_admin.py` — admin auth gating, field validation (short profession/industry/sub-agent name, too many sub-agents, non-positive agent number), the create-vs-update distinction, the stale-sub-agent-removal fix, and catalog ordering.
+
+Tests run against an in-memory SQLite DB via dependency override, no external services required — including the rate-limit test, which needed an autouse fixture (`tests/conftest.py::reset_rate_limiter`) to clear the limiter's shared in-memory state between tests, since every `TestClient` request looks like it comes from the same fake IP. CI (`.github/workflows/test.yml`) runs this suite on every push/PR to `main`.
 
 ## AI-assisted development
 
@@ -116,15 +233,17 @@ pytest tests/ -v
 
 ## Known limitations
 
-- **No password strength requirement** on signup — any non-empty string is accepted. Would add a minimum length before production use.
-- **Signup/login aren't rate-limited** — only the chat endpoint is. A determined attacker could brute-force a weak password since there's no lockout or throttling on `/agents/{slug}/login`.
-- **Single shared admin credential** (`ADMIN_USER`/`ADMIN_PASSWORD`), not per-admin accounts — fine for a small team, not for a multi-admin org.
-- **No HTTPS enforcement in application code** — relies on the hosting platform (Render) terminating TLS, which it does, but the app itself would happily serve plain HTTP if run elsewhere without a proxy in front.
+- **Single shared admin credential** (`ADMIN_USER`/`ADMIN_PASSWORD`), not per-admin accounts — fine for a small team, not for a multi-admin org. Fixing this properly means a real admin-user table and its own auth flow, not a quick patch, so it's left as a deliberate scope cut rather than forced in.
 - **Free-tier cold starts.** Render's free plan spins the instance down after inactivity; the first request afterward is slow. Not fixable without paid hosting.
-- **`upsert_agent` doesn't remove sub-agents missing from a new submission.** Re-adding an agent through `/admin/agents` with a different sub-agent list accumulates rather than replaces — the old ones stay unless you also delete them.
 - **Ad hoc schema migrations, no Alembic.** New columns (`created_at`/`updated_at`) get added to an already-seeded DB via a small guarded `ALTER TABLE` in `init_db()` rather than a real migration tool — fine at this scale, wouldn't scale to a team environment. (This approach already bit once: the first version used `server_default=func.now()`, which only takes effect when the DB column itself has a DDL-level default — a raw `ALTER TABLE` doesn't add one, so rows inserted after the migration silently got `NULL` timestamps until it was caught and switched to a client-side `default=`.)
 - **The admin duplicate-agent warning is best-effort, not authoritative.** It mirrors the backend's `slugify()` in JS well enough to catch the common case, but the source of truth is still whatever slug the backend actually computes — the warning is a UX nicety, not a guarantee.
-- **No automated tests for anything added after the original auth/chat coverage** — admin validation, the duplicate-agent check, catalog/sub-agent ordering, and the frontend redesign are all verified manually (including live, in a real browser) but not covered by `pytest`.
+- **Frontend behavior (the redesign, toast notifications, error formatting) is verified manually and live in a real browser, not covered by `pytest`** — everything server-side it depends on (validation, ordering, auth) is.
+
+Fixed since first noted here, kept for context on what changed and why:
+- ~~No password strength requirement on signup~~ — `SignupRequest.password` now requires 8–72 characters (72 is bcrypt's own input limit).
+- ~~Signup/login aren't rate-limited~~ — both now `10/minute`, keyed by IP (no authenticated user exists yet at that point) via the same `slowapi` limiter the chat endpoint uses.
+- ~~`upsert_agent` doesn't remove sub-agents missing from a new submission~~ — it now deletes any existing sub-agent whose slug isn't in the new submission, so re-submitting an agent with a trimmed sub-agent list replaces rather than accumulates. Covered by `tests/test_admin.py::test_admin_resubmit_replaces_subagents_not_accumulates`.
+- ~~No HTTPS enforcement in application code~~ — checked directly rather than assumed: `curl http://<live-url>` returns a `301` to `https://` before the request ever reaches the app, confirmed at Render's edge. Deliberately *not* adding app-level `HTTPSRedirectMiddleware` on top of that — `render.yaml`'s `startCommand` doesn't pass `--proxy-headers` to uvicorn, so the app can't currently see the real scheme through Render's proxy, and enabling the middleware without that would cause a redirect loop.
 
 ## What I'd do differently with more time
 
