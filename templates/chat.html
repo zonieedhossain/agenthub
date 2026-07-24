@@ -36,10 +36,9 @@
 
     fetch(`/api/agents/${slug}`).then(r => r.json()).then(a => {
       window.__agentProfession = a.profession;
-      activeRole = a.description || '';
       const tabs = document.getElementById('subtabs');
       tabs.innerHTML =
-        `<div class="sidebar-item on" data-id="" data-name="Main agent" data-role="${esc(a.description || '')}">
+        `<div class="sidebar-item" data-id="" data-name="Main agent" data-role="${esc(a.description || '')}">
            <div class="app-icon sm" style="background:${colorFor(a.profession)}">${esc(initials(a.profession))}</div>
            <span>Main agent</span>
          </div>` +
@@ -48,8 +47,21 @@
             <div class="app-icon sm" style="background:${colorFor(s.name)}">${esc(initials(s.name))}</div>
             <span>${esc(s.name)}</span>
           </div>`).join('');
+
+      // Restore whichever tab (Main agent or a sub-agent) was last selected
+      // for this specific agent, so a reload doesn't bounce you back to
+      // Main agent — falls back to Main agent if nothing saved, or if the
+      // saved sub-agent no longer exists.
+      const savedId = localStorage.getItem(`activeSub_${slug}`) || '';
+      const items = [...document.querySelectorAll('.sidebar-item')];
+      const target = items.find(el => el.dataset.id === savedId) || items[0];
+      activeSub = target.dataset.id ? Number(target.dataset.id) : null;
+      activeName = target.dataset.name;
+      activeRole = target.dataset.role;
+      target.classList.add('on');
+
       drawHeader();
-      loadHistory(null);
+      loadHistory(activeSub);
     });
 
     // Event delegation instead of inline onclick with interpolated names:
@@ -96,6 +108,7 @@
       activeSub = id;
       activeName = name;
       activeRole = role;
+      localStorage.setItem(`activeSub_${slug}`, id === null ? '' : String(id));
       document.querySelectorAll('.sidebar-item').forEach(t => t.classList.remove('on'));
       el.classList.add('on');
       drawHeader();
