@@ -2,50 +2,39 @@ import sys
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from sqlalchemy import text
-from app.database import engine
+from app.database import engine, init_db
+from app.routers.auth import router as auth_router
+from app.routers.agents import router as agents_router
+from app.routers.chat import router as chat_router
+from pipeline.ingest import run as seed_agents
 
-import traceback
-from fastapi import Request
-from fastapi.responses import JSONResponse
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: runs before the app starts accepting requests
     try:
         with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
         print("Database connection successful")
     except Exception as e:
-        print("Database connection failed:", e)
-        print("Stopping app — check your DATABASE_URL in .env")
+        print("❌ Database connection failed:", e)
         sys.exit(1)
 
-    # Auto-seed on every startup — safe because ingest.py is idempotent
+    init_db()  # make sure tables exist before seeding
+
     try:
         seed_agents("pipeline/agents_sample.xlsx")
     except Exception as e:
         print("Seeding failed (app will still start):", e)
 
-    yield  # app runs here, serving requests
-
-    # Shutdown: runs when the app is stopping (optional cleanup)
+    yield
     print("Shutting down AgentHub")
 
+
 app = FastAPI(lifespan=lifespan)
-
-
-from app.routers.auth import router as auth_router
-
 app.include_router(auth_router)
+app.include_router(agents_router)
+app.include_router(chat_router)
 
-# @app.exception_handler(Exception)
-# async def debug_exception_handler(request: Request, exc: Exception):
-#     tb = traceback.format_exc()
-#     print(tb)  # still prints to terminal too
-#     return JSONResponse(
-#         status_code=500,
-#         content={"error": str(exc), "traceback": tb},
-#     )
 
 @app.get("/")
 def read_root():
