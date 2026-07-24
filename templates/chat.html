@@ -102,9 +102,9 @@
       loadHistory(id);
     }
 
-    // Newest message at the top, oldest at the bottom — history[] itself
-    // stays in chronological (push) order since send()/loadHistory() logic
-    // is simpler that way; only the render order is reversed here.
+    // Chronological order: your message, then its answer, then your next
+    // message, then its answer — reading top to bottom in the order it
+    // actually happened, same as every mainstream chat app.
     function draw() {
       const box = document.getElementById('msgs');
       if (!history.length) {
@@ -112,12 +112,12 @@
           ${activeRole ? esc(activeRole) : ''}<br>Say hello to get started.</div>`;
         return;
       }
-      box.innerHTML = [...history].reverse().map(m => `
+      box.innerHTML = history.map(m => `
         <div class="msg-row ${m.role}">
           ${m.role === 'bot' ? `<div class="app-icon xs" style="background:${colorFor(activeSub ? activeName : (window.__agentProfession || slug))}">${esc(initials(activeSub ? activeName : (window.__agentProfession || slug)))}</div>` : ''}
           <div class="msg ${m.role}">${m.role === 'bot' ? formatReply(m.content) : esc(m.content)}</div>
         </div>`).join('');
-      box.scrollTop = 0;
+      box.scrollTop = box.scrollHeight;
     }
 
     // Light markdown-style rendering for bot replies: bold, inline code, bullet
@@ -152,8 +152,8 @@
       el.className = 'msg-row bot';
       el.innerHTML = `<div class="app-icon xs" style="background:${colorFor(activeSub ? activeName : (window.__agentProfession || slug))}">${esc(initials(activeSub ? activeName : (window.__agentProfession || slug)))}</div>
         <div class="msg bot thinking"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>`;
-      box.prepend(el);  // newest-first layout — the pending reply goes at the top, not the bottom
-      box.scrollTop = 0;
+      box.appendChild(el);
+      box.scrollTop = box.scrollHeight;
       return el;
     }
 
