@@ -42,6 +42,7 @@ header{background:var(--surface);border-bottom:1px solid var(--line);position:st
 .detail-hero{display:flex;align-items:center;gap:16px;margin:20px 0 22px}
 .agent-title{font-family:"Bricolage Grotesque";font-size:26px;font-weight:700}
 .agent-ind{color:var(--muted);margin-top:2px}
+.agent-desc{color:var(--ink);font-size:15px;line-height:1.5;margin:4px 0 20px}
 .section-label{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
   color:var(--muted);margin:28px 0 12px}
 .sub-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
@@ -60,6 +61,7 @@ header{background:var(--surface);border-bottom:1px solid var(--line);position:st
 .btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--line)}
 .btn.ghost:hover{border-color:var(--accent);filter:none}
 .sub-row{display:flex;gap:8px;margin-bottom:8px}
+.center-card{max-width:420px;margin:24px auto 0}
 .back{display:inline-block;margin-top:16px;color:var(--muted);text-decoration:none;font-size:14px}
 .back:hover{color:var(--ink)}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px;

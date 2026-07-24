@@ -2,7 +2,7 @@
 {% block title %}Sign in — AgentHub{% endblock %}
 {% block content %}
 <a class="back" href="/agents/{{ slug }}">← Back</a>
-<div class="card auth-card" style="max-width:420px">
+<div class="card auth-card center-card">
     <div class="app-icon lg" id="authIcon" style="margin:0 auto 14px">?</div>
     <div class="auth-tabs">
         <button class="tab on" onclick="setMode('login')">Log in</button>
@@ -42,7 +42,11 @@
       });
       const data = await res.json();
       if (!res.ok) {
-        document.getElementById('err').textContent = data.detail || 'Something went wrong';
+        const msg = Array.isArray(data.detail)
+          ? data.detail.map(d => d.msg).join('; ')
+          : (data.detail || 'Something went wrong');
+        document.getElementById('err').textContent = msg;
+        toast(msg, 'error');
         return;
       }
       localStorage.setItem(`token_${slug}`, data.access_token);

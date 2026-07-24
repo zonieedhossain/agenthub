@@ -164,9 +164,16 @@
           body: JSON.stringify({message, sub_agent_id: activeSub}),
         });
         const data = await res.json();
-        history.push({role: 'bot', content: res.ok ? data.reply : 'Error: ' + (data.detail || 'failed')});
+        if (res.ok) {
+          history.push({role: 'bot', content: data.reply});
+        } else {
+          const msg = Array.isArray(data.detail) ? data.detail.map(d => d.msg).join('; ') : (data.detail || 'failed');
+          history.push({role: 'bot', content: 'Error: ' + msg});
+          toast(msg, 'error');
+        }
       } catch (e) {
         history.push({role: 'bot', content: 'Error: could not reach the server'});
+        toast('Could not reach the server', 'error');
       } finally {
         thinkingEl.remove();
         setBusy(false);

@@ -23,6 +23,7 @@
             <div class="agent-ind">${esc(a.industry)}</div>
           </div>
         </div>
+        ${a.description ? `<p class="agent-desc">${esc(a.description)}</p>` : ''}
         <a class="btn btn-lg" href="/agents/${encodeURIComponent(slug)}/auth">💬 Sign in to chat</a>
         ${a.sub_agents.length ? `
           <div class="section-label">Specialized sub-agents</div>

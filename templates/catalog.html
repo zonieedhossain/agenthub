@@ -19,7 +19,7 @@
 
       fetch(`/agents?page=${page}&limit=18`).then(r => r.json()).then(data => {
         grid.innerHTML = data.items.map(a => `
-          <a class="app-card" href="/agents/${encodeURIComponent(a.slug)}">
+          <a class="app-card" href="/agents/${encodeURIComponent(a.slug)}" title="${esc(a.description)}">
             <div class="app-icon" style="background:${colorFor(a.profession)}">${esc(initials(a.profession))}</div>
             <div class="app-info">
               <div class="app-name">${esc(a.profession)}</div>
