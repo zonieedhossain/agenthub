@@ -70,9 +70,11 @@ def upsert_agent(session, number: int, industry: str, profession: str, subs_data
         agent.industry = industry
         agent.system_prompt = system_prompt
 
+    submitted_slugs = set()
     for name, task in subs_data:
         name = repair_truncated_name(name, industry)
         sub_slug = slugify(name)
+        submitted_slugs.add(sub_slug)
         sub = session.query(SubAgent).filter_by(agent_id=agent.id, slug=sub_slug).first()
         sub_prompt = SUB_PROMPT.format(sub_name=name, profession=profession, industry=industry, sub_task=task)
         if not sub:
@@ -80,6 +82,13 @@ def upsert_agent(session, number: int, industry: str, profession: str, subs_data
         else:
             sub.task = task
             sub.system_prompt = sub_prompt
+
+    # Remove sub-agents that existed before but aren't in this submission —
+    # without this, re-submitting an agent with a trimmed-down sub-agent list
+    # accumulated stale rows instead of replacing them.
+    session.query(SubAgent).filter(
+        SubAgent.agent_id == agent.id, ~SubAgent.slug.in_(submitted_slugs)
+    ).delete(synchronize_session=False)
 
     return agent
 

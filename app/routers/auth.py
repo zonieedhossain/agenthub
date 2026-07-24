@@ -1,16 +1,21 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_db
 from app.schemas import SignupRequest, LoginRequest, TokenResponse
 from app.auth import hash_password, verify_password, create_access_token
 from app.models import Agent, User
+from app.rate_limit import limiter
 
 router = APIRouter()
 
 
+# No authenticated user exists yet at signup/login, so the limiter's
+# key_func falls back to per-IP (see app/rate_limit.py) — the right
+# behavior here, unlike chat where per-user keying matters.
 @router.post("/agents/{slug}/signup", response_model=TokenResponse)
-def signup(slug: str, body: SignupRequest, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def signup(request: Request, slug: str, body: SignupRequest, db: Session = Depends(get_db)):
     agent = db.query(Agent).filter_by(slug=slug).first()
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
@@ -29,7 +34,8 @@ def signup(slug: str, body: SignupRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/agents/{slug}/login", response_model=TokenResponse)
-def login(slug: str, body: LoginRequest, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+def login(request: Request, slug: str, body: LoginRequest, db: Session = Depends(get_db)):
     agent = db.query(Agent).filter_by(slug=slug).first()
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
