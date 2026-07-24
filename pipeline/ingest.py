@@ -92,8 +92,8 @@ def upsert_agent(session, number: int, industry: str, profession: str, subs_data
 
     return agent
 
-def run(xlsx_path: str):
-    df = pd.read_excel(xlsx_path)
+def run(source_path: str):
+    df = pd.read_csv(source_path) if source_path.lower().endswith(".csv") else pd.read_excel(source_path)
     session = SessionLocal()
     try:
         for _, row in df.iterrows():

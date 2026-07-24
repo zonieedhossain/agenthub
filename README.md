@@ -27,7 +27,7 @@ Every one of the ~100 seeded agents ships with up to 4 sub-agents already — co
 
 ### Content pipeline
 
-`pipeline/ingest.py` turns raw agent data (originally `agents_sample.csv`, converted to `.xlsx` here for convenience — `run()` reads it via `pandas.read_excel()`; swapping in `read_csv()` for a raw CSV source is a one-line change since everything downstream just operates on the resulting DataFrame) into working agent configs:
+`pipeline/ingest.py` turns raw agent data into working agent configs. `run()` accepts either `agents_sample.csv` or `.xlsx` — it picks the reader from the file extension, then everything downstream operates on the resulting DataFrame the same way either way:
 
 - `upsert_agent()` is the single function that generates a system prompt from a template (`MAIN_PROMPT`/`SUB_PROMPT`) given a profession, industry, and up to 4 sub-agent (name, task) pairs, then creates or updates the `Agent`/`SubAgent` rows.
 - `run()` batch-imports the whole spreadsheet on app startup (see `lifespan` in `app/main.py` — it seeds the DB automatically the first time it connects).
