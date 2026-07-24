@@ -101,12 +101,12 @@ This project was built with **Claude Code** (Anthropic) as the primary coding as
 ## Known limitations
 
 - **No password strength requirement** on signup — any non-empty string is accepted. Would add a minimum length before production use.
-- **Chat history isn't reloaded on page refresh.** `GET /agents/{slug}/chat/history` exists and messages are persisted, but the chat UI only keeps history in memory for the current page session — refreshing loses the visible transcript (though nothing is lost server-side).
 - **Signup/login aren't rate-limited** — only the chat endpoint is. A determined attacker could brute-force a weak password since there's no lockout or throttling on `/agents/{slug}/login`.
 - **Single shared admin credential** (`ADMIN_USER`/`ADMIN_PASSWORD`), not per-admin accounts — fine for a small team, not for a multi-admin org.
 - **No HTTPS enforcement in application code** — relies on the hosting platform (Render) terminating TLS, which it does, but the app itself would happily serve plain HTTP if run elsewhere without a proxy in front.
 - **Free-tier cold starts.** Render's free plan spins the instance down after inactivity; the first request afterward is slow. Not fixable without paid hosting.
-- `pipeline/ingest.py` has a leftover duplicated block (helper functions/templates defined twice near the top of the file) from an earlier edit — harmless since Python just uses the later definitions, but it should be deleted.
+- **`upsert_agent` doesn't remove sub-agents missing from a new submission.** Re-adding an agent through `/admin/agents` with a different sub-agent list accumulates rather than replaces — the old ones stay unless you also delete them.
+- **Ad hoc schema migrations, no Alembic.** New columns (`created_at`/`updated_at`) get added to an already-seeded DB via a small guarded `ALTER TABLE` in `init_db()` rather than a real migration tool — fine at this scale, wouldn't scale to a team environment.
 
 ## What I'd do differently with more time
 

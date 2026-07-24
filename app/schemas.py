@@ -30,16 +30,6 @@ class ChatResponse(BaseModel):
     reply: str
 
 
-# --- Pagination (plain dict-based, no generics needed) ---
-
-class AgentListResponse(BaseModel):
-    items: list[dict]
-    page: int
-    limit: int
-    total: int
-    total_pages: int
-
-
 # --- Admin ---
 
 class AdminSubAgentInput(BaseModel):

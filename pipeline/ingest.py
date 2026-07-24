@@ -48,55 +48,6 @@ Your specialization: {sub_task}
 Answer only from this specialization. Stay in character, be concise and practical."""
 
 
-import re
-import sys
-import unicodedata
-from pathlib import Path
-
-import pandas as pd
-
-sys.path.append(str(Path(__file__).resolve().parent.parent))
-
-from app.database import SessionLocal, init_db
-from app.models import Agent, SubAgent
-
-
-def slugify(text: str) -> str:
-    text = unicodedata.normalize("NFKD", str(text)).encode("ascii", "ignore").decode()
-    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
-
-
-def clean(value) -> str:
-    if pd.isna(value):
-        return ""
-    return re.sub(r"\s+", " ", str(value)).strip()
-
-
-def repair_truncated_name(name: str, industry: str) -> str:
-    if industry and industry not in name:
-        for cut in range(len(industry) - 1, 5, -1):
-            prefix = industry[:cut]
-            if prefix in name:
-                return name.replace(prefix, industry, 1)
-    return name
-
-
-MAIN_PROMPT = """You are the {profession} Agent on AgentHub, an AI assistant for \
-{profession}s in the {industry} industry.
-
-Your specialized capabilities (also available as dedicated sub-agents):
-{capabilities}
-
-Stay in character, be concise and practical. For regulated topics (medical, legal, \
-financial), remind the user that final decisions require a licensed professional."""
-
-SUB_PROMPT = """You are the {sub_name}, a specialized sub-agent of the {profession} Agent \
-on AgentHub, serving {profession}s in the {industry} industry.
-
-Your specialization: {sub_task}
-
-Answer only from this specialization. Stay in character, be concise and practical."""
-
 def upsert_agent(session, number: int, industry: str, profession: str, subs_data: list[tuple[str, str]]):
     """
     Core pipeline logic: given one agent's raw data, generate its system
