@@ -12,7 +12,7 @@ def list_agents(
         limit: int = Query(20, ge=1, le=100),
         db: Session = Depends(get_db),
 ):
-    query = db.query(Agent).filter_by(is_active=1).order_by(Agent.number)
+    query = db.query(Agent).filter_by(is_active=1).order_by(Agent.updated_at.desc(), Agent.number.asc())
     total = query.count()
     agents = query.offset((page - 1) * limit).limit(limit).all()
 
@@ -34,7 +34,12 @@ def get_agent(slug: str, db: Session = Depends(get_db)):
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
 
-    subs = db.query(SubAgent).filter_by(agent_id=agent.id).all()
+    subs = (
+        db.query(SubAgent)
+        .filter_by(agent_id=agent.id)
+        .order_by(SubAgent.updated_at.desc(), SubAgent.id.asc())
+        .all()
+    )
     return {
         "slug": agent.slug,
         "industry": agent.industry,

@@ -14,6 +14,8 @@ class Agent(Base):
     description = Column(Text, nullable=False)
     system_prompt = Column(Text, nullable=False)
     is_active = Column(Integer, default=1)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 
     sub_agents = relationship("SubAgent", back_populates="agent")
 
@@ -27,6 +29,8 @@ class SubAgent(Base):
     name = Column(String, nullable=False)
     task = Column(Text, nullable=False)
     system_prompt = Column(Text, nullable=False)
+    created_at = Column(TIMESTAMP, server_default=func.now())
+    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 
     agent = relationship("Agent", back_populates="sub_agents")
 
