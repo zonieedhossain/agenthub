@@ -3,7 +3,8 @@
 A "Play Store" for AI agents: browse a catalog of ~100 profession-specific AI agents (doctor, lawyer, accountant, software engineer, ...), sign in for the one agent you picked, and chat with it — powered by a real LLM (Gemini), in character.
 
 **Live:** https://agenthub-hxt8.onrender.com/
-*(hosted on Render's free tier — the instance spins down after ~15 minutes of inactivity, so the first request after a while can take 20–30s to wake up)*
+**Repo:** https://github.com/zonieedhossain/agenthub
+*(hosted on Render's free tier, served over HTTPS via Render's automatic TLS termination — the instance spins down after ~15 minutes of inactivity, so the first request after a while can take 20–30s to wake up)*
 
 ## Test accounts
 
@@ -22,9 +23,11 @@ Same email, two separate accounts (one per agent) — the token from one will re
 
 There is exactly one `Agent` model and one `SubAgent` model (`app/models.py`). Every one of the ~100 catalog entries — and every sub-agent under them — is a row in those two tables, not a Python class or a code path. The chat endpoint (`app/routers/chat.py`) resolves whichever agent/sub-agent the request names and passes its `system_prompt` column straight to the LLM call. Adding agent #101 means adding a row (via the pipeline script or the `/admin/agents` endpoint below) — no new code, no redeploy.
 
+Every one of the ~100 seeded agents ships with up to 4 sub-agents already — comfortably exceeding the assignment's "at least 5 agents, 3 with 2–5 sub-agents" requirement, since this holds for the entire catalog, not just a hand-picked few.
+
 ### Content pipeline
 
-`pipeline/ingest.py` turns raw agent data (originally `agents_sample.csv`, converted to `.xlsx` here) into working agent configs:
+`pipeline/ingest.py` turns raw agent data (originally `agents_sample.csv`, converted to `.xlsx` here for convenience — `run()` reads it via `pandas.read_excel()`; swapping in `read_csv()` for a raw CSV source is a one-line change since everything downstream just operates on the resulting DataFrame) into working agent configs:
 
 - `upsert_agent()` is the single function that generates a system prompt from a template (`MAIN_PROMPT`/`SUB_PROMPT`) given a profession, industry, and up to 4 sub-agent (name, task) pairs, then creates or updates the `Agent`/`SubAgent` rows.
 - `run()` batch-imports the whole spreadsheet on app startup (see `lifespan` in `app/main.py` — it seeds the DB automatically the first time it connects).
@@ -42,13 +45,16 @@ Each agent gets its own login boundary using a **shared auth system, tenant-scop
 
 Passwords are hashed with bcrypt (`passlib`), never stored or logged in plaintext. `.env` (secrets) is gitignored and was never committed.
 
-### Stack
+### Stack, and why each piece
 
-- **Backend:** FastAPI + SQLAlchemy, Postgres in production (Neon free tier), SQLite for tests
-- **Frontend:** Jinja2-rendered pages + vanilla JS (no build step, no framework) — a Play Store-style catalog grid, a real chat-app layout (sidebar navigation, message avatars, markdown-lite reply formatting, a live "thinking" indicator), and an admin dashboard with toast notifications and inline validation. No frontend framework since the surface area didn't need one; avatars are generated (initials on a color hashed from the agent's name, Slack/Gmail-style) rather than image assets.
-- **LLM:** Google Gemini (`google-genai`, `gemini-flash-latest`)
-- **Rate limiting:** `slowapi`, keyed by authenticated user (falls back to IP only for unauthenticated requests)
-- **Deployment:** Render (`render.yaml`), free tier
+| Choice | What | Why this over the alternatives |
+|---|---|---|
+| **Backend framework** | FastAPI | Required to be FastAPI or Django by the assignment. Picked FastAPI over Django specifically because this app is a thin JSON/HTML API with no admin-site scaffolding, ORM-agnostic model layer, or template-heavy MVC needs Django is built around — FastAPI's dependency-injection system (`Depends(get_current_user)`, `Depends(get_db)`) maps directly onto "resolve the agent-scoped user, then check the DB," and Pydantic schemas give free request validation (see the admin form validation) without extra libraries. |
+| **ORM / DB** | SQLAlchemy + Postgres (Neon free tier) in production, SQLite for tests | Postgres over SQLite in production because the app is meant to be genuinely multi-user/concurrent (many chat sessions writing `Message`/`UsageLog` rows at once) — SQLite's single-writer lock isn't a good fit for that, even at small scale. Neon specifically because it's a real managed Postgres with a usable free tier and no server to provision. SQLite for tests because the whole suite needs to spin up and tear down a fresh schema per test in-process with zero external dependencies — swapping the engine URL is the only difference (`tests/conftest.py`), which is also why "tests only run against SQLite, never Postgres" made it into Known Limitations below rather than being silently ignored. |
+| **Frontend** | Jinja2-rendered pages + vanilla JS, no framework, no build step | The assignment left this open, and the actual UI surface (catalog, agent detail, auth, chat, admin) is four page types with straightforward client-server data flow — not enough state or component reuse to justify React/Vue's overhead, and a build step is one more thing that can break "loads and functions without you present to explain it." Shared behavior (the `esc()`/`colorFor()`/`toast()`/`apiErrorMessage()` helpers) lives in `base.html` and is reused across every page without a bundler. The tradeoff is real — no component model means the chat page's JS is one longer file instead of composed pieces — but for this scope it was the faster, more debuggable path, and it kept every fix in this session inspectable via `curl`/view-source instead of behind a build artifact. |
+| **LLM provider** | Google Gemini (`google-genai`, `gemini-flash-latest`) | Assignment allowed any provider. Picked Gemini for a genuinely usable free tier during iterative development (signing up ~100 agents and repeatedly testing chat without hitting a paywall), and because the call is isolated behind one function (`get_reply()` in `app/llm.py`) that only the chat router calls — swapping to OpenAI/Anthropic is a matter of rewriting that one function's internals, not touching routing, auth, or the pipeline. |
+| **Rate limiting** | `slowapi`, keyed by authenticated user (IP fallback only for unauthenticated requests) | Chosen over hand-rolling limiting because it's a small, FastAPI-native library with a decorator API (`@limiter.limit("15/minute")`) rather than middleware that has to be threaded through every route. Keyed by user rather than IP specifically because IP-based limiting would let one shared-network user's chat activity throttle everyone else behind the same IP/NAT — the fix for this (`get_current_user` setting `request.state.user`) is covered directly by a live-verified test where two different users behind one client IP get independent limit buckets. |
+| **Deployment** | Render (`render.yaml`), free tier | Chosen over Railway/Fly.io for the least ceremony specifically for a FastAPI app: `render.yaml` declares the build/start commands directly, HTTPS is automatic with no separate certificate step, and the free web-service tier doesn't require a credit card to start. The real cost of the free tier is cold starts after ~15 minutes idle — documented in Known Limitations rather than hidden. |
 
 ### Admin panel
 
@@ -106,7 +112,7 @@ pytest tests/ -v
 
 ## AI-assisted development
 
-This project was built with **Claude Code** (Anthropic) as the primary coding assistant throughout — architecture, implementation, debugging, and this README were all done in collaboration with it, including a pass where it drove the deployed app in a real headless browser to find and fix bugs that unit tests alone hadn't caught (see commit history).
+**Claude Code** (Anthropic) was used throughout this project's development, across both backend and frontend work — architecture decisions, implementation, and this README were all done in collaboration with it. Concretely, in addition to the frontend/UI work (the catalog/chat/admin redesign), it also found and fixed backend issues that unit tests alone hadn't caught by driving the deployed app in a real headless browser: the `/admin/stats` crash from missing imports, a rate-limiter bug that fell back to per-IP instead of per-user limiting, an XSS vulnerability in unescaped chat rendering, a route collision that made the agent detail page unreachable, and a schema-migration bug that silently left new rows with `NULL` timestamps — see commit history for the full list.
 
 ## Known limitations
 
