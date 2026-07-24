@@ -9,16 +9,16 @@
     const slug = "{{ slug }}";
     fetch(`/agents/${slug}`).then(r => r.json()).then(a => {
       document.getElementById('detail').innerHTML = `
-        <div class="agent-title">${a.profession} Agent</div>
-        <div class="agent-ind">${a.industry}</div>
+        <div class="agent-title">${esc(a.profession)} Agent</div>
+        <div class="agent-ind">${esc(a.industry)}</div>
         <div class="sub-list">
           ${a.sub_agents.map(s => `
             <div class="sub-item">
-              <b>${s.name}</b>
-              <p>${s.task}</p>
+              <b>${esc(s.name)}</b>
+              <p>${esc(s.task)}</p>
             </div>`).join('')}
         </div>
-        <a class="btn" href="/agents/${slug}/auth">Sign in to this agent</a>
+        <a class="btn" href="/agents/${encodeURIComponent(slug)}/auth">Sign in to this agent</a>
       `;
     });
 </script>

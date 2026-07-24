@@ -16,10 +16,10 @@
       currentPage = page;
       fetch(`/agents?page=${page}&limit=20`).then(r => r.json()).then(data => {
         document.getElementById('catalog').innerHTML = data.items.map(a => `
-          <a class="row" href="/agents/${a.slug}">
+          <a class="row" href="/agents/${encodeURIComponent(a.slug)}">
             <span class="body">
-              <span class="prof">${a.profession}</span><br>
-              <span class="ind">${a.industry}</span>
+              <span class="prof">${esc(a.profession)}</span><br>
+              <span class="ind">${esc(a.industry)}</span>
             </span>
             <span class="arrow">→</span>
           </a>`).join('');

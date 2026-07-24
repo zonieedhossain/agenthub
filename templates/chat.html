@@ -23,7 +23,7 @@
     fetch(`/agents/${slug}`).then(r => r.json()).then(a => {
       const tabs = document.getElementById('subtabs');
       tabs.innerHTML = `<button class="subtab on" onclick="pick(null,this)">Main agent</button>` +
-        a.sub_agents.map(s => `<button class="subtab" onclick="pick(${s.id},this)">${s.name}</button>`).join('');
+        a.sub_agents.map(s => `<button class="subtab" onclick="pick(${s.id},this)">${esc(s.name)}</button>`).join('');
     });
 
     function pick(id, btn) {
@@ -37,7 +37,7 @@
     function draw() {
       const box = document.getElementById('msgs');
       box.innerHTML = history.map(m =>
-        `<div class="msg ${m.role}">${m.content}</div>`).join('');
+        `<div class="msg ${m.role}">${esc(m.content)}</div>`).join('');
       box.scrollTop = box.scrollHeight;
     }
 

@@ -16,6 +16,13 @@
 <main class="wrap">
     {% block content %}{% endblock %}
 </main>
+<script>
+    function esc(s) {
+      return String(s).replace(/[&<>"']/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+      }[c]));
+    }
+</script>
 {% block scripts %}{% endblock %}
 </body>
 </html>
