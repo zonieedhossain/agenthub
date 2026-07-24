@@ -28,7 +28,7 @@ def list_agents(
     }
 
 
-@router.get("/agents/{slug}")
+@router.get("/api/agents/{slug}")
 def get_agent(slug: str, db: Session = Depends(get_db)):
     agent = db.query(Agent).filter_by(slug=slug).first()
     if not agent:

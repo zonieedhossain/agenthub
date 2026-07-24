@@ -7,7 +7,7 @@
 {% block scripts %}
 <script>
     const slug = "{{ slug }}";
-    fetch(`/agents/${slug}`).then(r => r.json()).then(a => {
+    fetch(`/api/agents/${slug}`).then(r => r.json()).then(a => {
       document.getElementById('detail').innerHTML = `
         <div class="agent-title">${esc(a.profession)} Agent</div>
         <div class="agent-ind">${esc(a.industry)}</div>

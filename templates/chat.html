@@ -20,7 +20,7 @@
     let activeSub = null;
     let history = [];
 
-    fetch(`/agents/${slug}`).then(r => r.json()).then(a => {
+    fetch(`/api/agents/${slug}`).then(r => r.json()).then(a => {
       const tabs = document.getElementById('subtabs');
       tabs.innerHTML = `<button class="subtab on" onclick="pick(null,this)">Main agent</button>` +
         a.sub_agents.map(s => `<button class="subtab" onclick="pick(${s.id},this)">${esc(s.name)}</button>`).join('');
