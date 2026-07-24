@@ -9,7 +9,7 @@ router = APIRouter()
 @router.get("/agents")
 def list_agents(
         page: int = Query(1, ge=1),
-        limit: int = Query(20, ge=1, le=100),
+        limit: int = Query(18, ge=1, le=100),
         db: Session = Depends(get_db),
 ):
     query = db.query(Agent).filter_by(is_active=1).order_by(Agent.updated_at.desc(), Agent.number.asc())

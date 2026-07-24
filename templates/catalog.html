@@ -15,9 +15,9 @@
     function loadPage(page) {
       currentPage = page;
       const grid = document.getElementById('catalog');
-      grid.innerHTML = Array.from({length: 8}).map(() => `<div class="app-card skeleton"></div>`).join('');
+      grid.innerHTML = Array.from({length: 18}).map(() => `<div class="app-card skeleton"></div>`).join('');
 
-      fetch(`/agents?page=${page}&limit=20`).then(r => r.json()).then(data => {
+      fetch(`/agents?page=${page}&limit=18`).then(r => r.json()).then(data => {
         grid.innerHTML = data.items.map(a => `
           <a class="app-card" href="/agents/${encodeURIComponent(a.slug)}">
             <div class="app-icon" style="background:${colorFor(a.profession)}">${esc(initials(a.profession))}</div>
