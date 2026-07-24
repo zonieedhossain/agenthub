@@ -2,23 +2,40 @@
 {% block title %}{{ slug }} — AgentHub{% endblock %}
 {% block content %}
 <a class="back" href="/">← All agents</a>
-<div class="card" id="detail">Loading…</div>
+<div id="detail">
+    <div class="detail-hero">
+        <div class="app-icon lg skeleton"></div>
+        <div>
+            <div class="agent-title skeleton-text">Loading…</div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 {% block scripts %}
 <script>
     const slug = "{{ slug }}";
     fetch(`/api/agents/${slug}`).then(r => r.json()).then(a => {
       document.getElementById('detail').innerHTML = `
-        <div class="agent-title">${esc(a.profession)} Agent</div>
-        <div class="agent-ind">${esc(a.industry)}</div>
-        <div class="sub-list">
-          ${a.sub_agents.map(s => `
-            <div class="sub-item">
-              <b>${esc(s.name)}</b>
-              <p>${esc(s.task)}</p>
-            </div>`).join('')}
+        <div class="detail-hero">
+          <div class="app-icon lg" style="background:${colorFor(a.profession)}">${esc(initials(a.profession))}</div>
+          <div>
+            <div class="agent-title">${esc(a.profession)} Agent</div>
+            <div class="agent-ind">${esc(a.industry)}</div>
+          </div>
         </div>
-        <a class="btn" href="/agents/${encodeURIComponent(slug)}/auth">Sign in to this agent</a>
+        <a class="btn btn-lg" href="/agents/${encodeURIComponent(slug)}/auth">💬 Sign in to chat</a>
+        ${a.sub_agents.length ? `
+          <div class="section-label">Specialized sub-agents</div>
+          <div class="sub-grid">
+            ${a.sub_agents.map(s => `
+              <div class="sub-card">
+                <div class="app-icon sm" style="background:${colorFor(s.name)}">${esc(initials(s.name))}</div>
+                <div>
+                  <div class="sub-name">${esc(s.name)}</div>
+                  <div class="sub-task">${esc(s.task)}</div>
+                </div>
+              </div>`).join('')}
+          </div>` : ''}
       `;
     });
 </script>

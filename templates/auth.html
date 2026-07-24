@@ -2,7 +2,8 @@
 {% block title %}Sign in — AgentHub{% endblock %}
 {% block content %}
 <a class="back" href="/agents/{{ slug }}">← Back</a>
-<div class="card" style="max-width:420px">
+<div class="card auth-card" style="max-width:420px">
+    <div class="app-icon lg" id="authIcon" style="margin:0 auto 14px">?</div>
     <div class="auth-tabs">
         <button class="tab on" onclick="setMode('login')">Log in</button>
         <button class="tab" onclick="setMode('signup')">Sign up</button>
@@ -19,6 +20,13 @@
 <script>
     const slug = "{{ slug }}";
     let mode = "login";
+
+    fetch(`/api/agents/${slug}`).then(r => r.json()).then(a => {
+      const icon = document.getElementById('authIcon');
+      icon.style.background = colorFor(a.profession);
+      icon.textContent = initials(a.profession);
+    });
+
     function setMode(m) {
       mode = m;
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));

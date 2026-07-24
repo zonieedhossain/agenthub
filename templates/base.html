@@ -10,7 +10,7 @@
 <body>
 <header>
     <div class="wrap hrow">
-        <a class="logo" href="/">Agent<span>Hub</span></a>
+        <a class="logo" href="/">🤖 Agent<span>Hub</span></a>
     </div>
 </header>
 <main class="wrap">
@@ -21,6 +21,25 @@
       return String(s).replace(/[&<>"']/g, c => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
       }[c]));
+    }
+
+    // A small, playful, fixed palette so every agent gets a consistent,
+    // distinct-looking "app icon" color derived from its own name — same
+    // idea as Slack/Gmail-style generated avatars, no image assets needed.
+    const AVATAR_PALETTE = [
+      '#FF6B6B', '#4ECDC4', '#FFB84C', '#6C5CE7', '#00B894',
+      '#FD79A8', '#0984E3', '#E17055', '#00CEC9', '#A29BFE',
+    ];
+
+    function colorFor(seed) {
+      let hash = 0;
+      for (let i = 0; i < seed.length; i++) hash = seed.charCodeAt(i) + ((hash << 5) - hash);
+      return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length];
+    }
+
+    function initials(name) {
+      const words = String(name).trim().split(/\s+/);
+      return ((words[0]?.[0] || '') + (words[1]?.[0] || '')).toUpperCase();
     }
 </script>
 {% block scripts %}{% endblock %}

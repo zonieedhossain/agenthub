@@ -5,7 +5,7 @@
     <h1>A catalog of professional AI agents.</h1>
     <p>Pick a profession, sign in for that agent only, and start chatting.</p>
 </section>
-<div id="catalog" class="catalog-list"></div>
+<div id="catalog" class="app-grid"></div>
 <div id="pagination" class="pagination"></div>
 {% endblock %}
 {% block scripts %}
@@ -14,14 +14,17 @@
 
     function loadPage(page) {
       currentPage = page;
+      const grid = document.getElementById('catalog');
+      grid.innerHTML = Array.from({length: 8}).map(() => `<div class="app-card skeleton"></div>`).join('');
+
       fetch(`/agents?page=${page}&limit=20`).then(r => r.json()).then(data => {
-        document.getElementById('catalog').innerHTML = data.items.map(a => `
-          <a class="row" href="/agents/${encodeURIComponent(a.slug)}">
-            <span class="body">
-              <span class="prof">${esc(a.profession)}</span><br>
-              <span class="ind">${esc(a.industry)}</span>
-            </span>
-            <span class="arrow">→</span>
+        grid.innerHTML = data.items.map(a => `
+          <a class="app-card" href="/agents/${encodeURIComponent(a.slug)}">
+            <div class="app-icon" style="background:${colorFor(a.profession)}">${esc(initials(a.profession))}</div>
+            <div class="app-info">
+              <div class="app-name">${esc(a.profession)}</div>
+              <div class="app-industry">${esc(a.industry)}</div>
+            </div>
           </a>`).join('');
 
         document.getElementById('pagination').innerHTML = `
@@ -29,6 +32,7 @@
           <span>Page ${data.page} of ${data.total_pages} (${data.total} agents)</span>
           <button ${data.page >= data.total_pages ? 'disabled' : ''} onclick="loadPage(${data.page + 1})">Next →</button>
         `;
+        window.scrollTo({top: 0, behavior: 'smooth'});
       });
     }
 
