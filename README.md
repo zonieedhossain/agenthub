@@ -229,7 +229,7 @@ Tests run against an in-memory SQLite DB via dependency override, no external se
 
 ## AI-assisted development
 
-Core requirements and architecture were researched and worked through using AI chat assistants (Claude, GPT, and Gemini) before and during implementation. **Claude Code** (Anthropic) was the coding agent used for this repository — implementation, debugging, and this README were done in collaboration with it, covering both backend work (auth, chat/config resolution, the content pipeline, bug fixes) and the frontend UI/design.
+Requirements and architecture were researched and worked through using AI chat assistants (Claude, GPT, and Gemini). **Claude Code** (Anthropic) was used as a coding agent for implementation, debugging, and this README, directed and reviewed throughout — every feature, fix, and design decision was specified and checked, not generated unsupervised.
 
 ## Known limitations
 
