@@ -1,29 +1,64 @@
 {% extends "base.html" %}
 {% block title %}Admin — AgentHub{% endblock %}
 {% block content %}
-<h1 style="font-family:'Bricolage Grotesque';font-size:24px;margin:20px 0">Admin — Agents</h1>
-
-<div class="card">
-    <div class="agent-title" style="font-size:18px">Add a new agent</div>
-    <label>Number</label><input id="number" type="number">
-    <label>Industry</label><input id="industry">
-    <label>Profession</label><input id="profession">
-    <div id="subs"></div>
-    <button class="btn ghost" type="button" onclick="addSubRow()">+ Add sub-agent</button>
-    <div class="err" id="err"></div>
-    <button class="btn" style="width:100%;margin-top:14px" onclick="submitAgent()">Create / Update Agent</button>
+<div id="loginGate">
+    <div class="card" style="max-width:420px">
+        <div class="agent-title" style="font-size:18px">Admin sign in</div>
+        <label>Username</label>
+        <input id="adminUser" autocomplete="username">
+        <label>Password</label>
+        <input id="adminPass" type="password" autocomplete="current-password"
+               onkeydown="if(event.key==='Enter')adminLogin()">
+        <div class="err" id="loginErr"></div>
+        <button class="btn" style="width:100%" onclick="adminLogin()">Sign in</button>
+    </div>
 </div>
 
-<div id="agentList" style="margin-top:24px"></div>
+<div id="adminApp" style="display:none">
+    <h1 style="font-family:'Bricolage Grotesque';font-size:24px;margin:20px 0">Admin — Agents</h1>
+
+    <div class="card">
+        <div class="agent-title" style="font-size:18px">Add a new agent</div>
+        <label>Number</label><input id="number" type="number">
+        <label>Industry</label><input id="industry">
+        <label>Profession</label><input id="profession">
+        <div id="subs"></div>
+        <button class="btn ghost" type="button" onclick="addSubRow()">+ Add sub-agent</button>
+        <div class="err" id="err"></div>
+        <button class="btn" style="width:100%;margin-top:14px" onclick="submitAgent()">Create / Update Agent</button>
+    </div>
+
+    <div id="agentList" style="margin-top:24px"></div>
+</div>
 {% endblock %}
 {% block scripts %}
 <script>
-    function authHeader() {
-      const u = prompt("Admin username:");
-      const p = prompt("Admin password:");
-      return "Basic " + btoa(`${u}:${p}`);
-    }
     let auth = null;
+
+    async function adminLogin() {
+      const u = document.getElementById('adminUser').value;
+      const p = document.getElementById('adminPass').value;
+      const candidate = "Basic " + btoa(`${u}:${p}`);
+      const errEl = document.getElementById('loginErr');
+      errEl.textContent = '';
+
+      let res;
+      try {
+        res = await fetch('/admin/stats', { headers: { Authorization: candidate } });
+      } catch (e) {
+        errEl.textContent = 'Could not reach the server';
+        return;
+      }
+      if (!res.ok) {
+        errEl.textContent = res.status === 401 ? 'Invalid admin credentials' : 'Sign in failed';
+        return;
+      }
+
+      auth = candidate;
+      document.getElementById('loginGate').style.display = 'none';
+      document.getElementById('adminApp').style.display = 'block';
+      renderStats(await res.json());
+    }
 
     function addSubRow() {
       const div = document.createElement('div');
@@ -34,7 +69,6 @@
     addSubRow(); addSubRow();
 
     async function submitAgent() {
-      if (!auth) auth = authHeader();
       const subs = [...document.querySelectorAll('#subs .sub-row')].map(row => ({
         name: row.querySelector('.sname').value,
         task: row.querySelector('.stask').value,
@@ -57,15 +91,17 @@
       if (res.ok) { alert(data.message); loadAgents(); }
     }
 
-    async function loadAgents() {
-      if (!auth) auth = authHeader();
-      const res = await fetch('/admin/stats', { headers: {'Authorization': auth} });
-      const data = await res.json();
+    function renderStats(data) {
       document.getElementById('agentList').innerHTML =
         '<table style="width:100%;border-collapse:collapse">' +
-        data.map(r => `<tr><td style="padding:6px 0">${r.agent}</td><td>${r.requests} reqs</td><td>${r.tokens} tokens</td></tr>`).join('') +
+        data.map(r => `<tr><td style="padding:6px 0">${esc(r.agent)}</td><td>${r.requests} reqs</td><td>${r.tokens} tokens</td></tr>`).join('') +
         '</table>';
     }
-    loadAgents();
+
+    async function loadAgents() {
+      const res = await fetch('/admin/stats', { headers: {'Authorization': auth} });
+      const data = await res.json();
+      renderStats(data);
+    }
 </script>
 {% endblock %}
